@@ -8,22 +8,28 @@ import StrokeAssessment from './components/StrokeAssessment';
 import SpeechAnalysis from './components/SpeechAnalysis';
 
 function App() {
+  // Detection state
   const [faceMeshResults, setFaceMeshResults] = useState(null);
   const [poseResults, setPoseResults] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
+  
+  // Analysis metrics
   const [asymmetryMetrics, setAsymmetryMetrics] = useState({});
   const [postureMetrics, setPostureMetrics] = useState({});
   const [riskLevel, setRiskLevel] = useState('low');
   const [assessmentFindings, setAssessmentFindings] = useState([]);
   const [speechAnalysisResults, setSpeechAnalysisResults] = useState(null);
   
+  // Refs
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   
+  // Toggle detection on/off
   const toggleDetection = () => {
     setIsDetecting(!isDetecting);
   };
   
+  // Clear all results and reset state
   const clearResults = () => {
     setFaceMeshResults(null);
     setPoseResults(null);
@@ -34,8 +40,14 @@ function App() {
     setSpeechAnalysisResults(null);
   };
   
+  // Handle speech analysis results
+  const handleSpeechAnalyzed = (results) => {
+    console.log('Speech analysis results received:', results);
+    setSpeechAnalysisResults(results);
+  };
+  
+  // Initialize any external libraries
   useEffect(() => {
-    // Initialize feather icons
     if (window.feather) {
       window.feather.replace();
     }
@@ -97,7 +109,7 @@ function App() {
         {/* Middle row: Speech Analysis */}
         <div className="mb-6">
           <SpeechAnalysis 
-            onSpeechAnalyzed={setSpeechAnalysisResults}
+            onSpeechAnalyzed={handleSpeechAnalyzed}
             facialMetrics={asymmetryMetrics}
           />
         </div>

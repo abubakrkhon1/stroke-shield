@@ -11,70 +11,117 @@ const SpeechAnalysis = ({ onSpeechAnalyzed, facialMetrics }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState('');
   const [speechResults, setSpeechResults] = useState(null);
+  const [selectedPrompt, setSelectedPrompt] = useState(0);
   const recognitionRef = useRef(null);
+
+  // Sample prompts for speech testing
+  const speechPrompts = [
+    "The early bird catches the worm, but the second mouse gets the cheese.",
+    "You can't teach an old dog new tricks, but you can teach a new dog old tricks.",
+    "The sky is blue in Cincinnati, and the grass is always greener on the other side.",
+    "She sells seashells by the seashore, and Peter Piper picked a peck of pickled peppers.",
+    "How much wood would a woodchuck chuck if a woodchuck could chuck wood?"
+  ];
+
+  // Rotate through prompts
+  const changePrompt = () => {
+    setSelectedPrompt((selectedPrompt + 1) % speechPrompts.length);
+  };
 
   // Initialize speech recognition
   useEffect(() => {
-    // Check if browser supports speech recognition
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      setError('Speech recognition is not supported in this browser. Try Chrome or Edge.');
-      return;
-    }
-
-    // Create recognition instance
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    
-    // Configure recognition
-    recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = true;
-    recognitionRef.current.lang = 'en-US';
-    
-    // Set up event handlers
-    recognitionRef.current.onresult = (event) => {
-      const current = event.resultIndex;
-      const transcript = event.results[current][0].transcript;
-      
-      setTranscript(prevTranscript => {
-        // If this is a new final result, append it 
-        if (event.results[current].isFinal) {
-          return prevTranscript + ' ' + transcript;
-        }
-        return prevTranscript;
-      });
-    };
-    
-    recognitionRef.current.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      setError(`Error: ${event.error}`);
-      setIsListening(false);
-    };
-    
-    recognitionRef.current.onend = () => {
-      // Only set listening to false if we didn't intend to keep listening
-      if (isListening) {
-        recognitionRef.current.start();
+    try {
+      // Check if browser supports speech recognition
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        setError('Speech recognition is not supported in this browser. Try Chrome or Edge.');
+        return;
       }
-    };
+
+      // Create recognition instance
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      
+      // Configure recognition
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+      
+      // Set up event handlers
+      recognitionRef.current.onresult = (event) => {
+        try {
+          const current = event.resultIndex;
+          const transcript = event.results[current][0].transcript;
+          
+          setTranscript(prevTranscript => {
+            // If this is a new final result, append it 
+            if (event.results[current].isFinal) {
+              return prevTranscript + ' ' + transcript;
+            }
+            return prevTranscript;
+          });
+        } catch (e) {
+          console.error('Error processing speech result:', e);
+          setError('Error processing speech. Please try again.');
+        }
+      };
+      
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setError('Microphone access denied. Please allow microphone access in your browser settings.');
+        } else if (event.error === 'audio-capture') {
+          setError('No microphone detected. Please connect a microphone and try again.');
+        } else {
+          setError(`Speech recognition error: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+      
+      recognitionRef.current.onend = () => {
+        // Only restart if we're still in listening mode
+        if (isListening && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {
+            console.error('Error restarting speech recognition:', e);
+            setIsListening(false);
+            setError('Error with speech recognition. Please refresh the page and try again.');
+          }
+        }
+      };
+    } catch (e) {
+      console.error('Error setting up speech recognition:', e);
+      setError('Failed to initialize speech recognition. Please refresh the page and try again.');
+    }
 
     // Cleanup
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.error('Error stopping recognition on cleanup:', e);
+        }
       }
     };
   }, []);
 
   // Start/stop listening
   const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current.stop();
+    try {
+      if (isListening) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } else {
+        setTranscript('');
+        setError('');
+        recognitionRef.current.start();
+        setIsListening(true);
+      }
+    } catch (e) {
+      console.error('Error toggling speech recognition:', e);
+      setError('Failed to control speech recognition. Please refresh the page and try again.');
       setIsListening(false);
-    } else {
-      setTranscript('');
-      recognitionRef.current.start();
-      setIsListening(true);
-      setError('');
     }
   };
 
@@ -210,6 +257,24 @@ const SpeechAnalysis = ({ onSpeechAnalyzed, facialMetrics }) => {
         {renderFastExplanation()}
       </div>
       
+      {/* Speech Prompt for User */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold">Read This Prompt</h3>
+          <button 
+            onClick={changePrompt}
+            className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+          >
+            Change Prompt
+          </button>
+        </div>
+        
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-lg text-center font-medium">
+          "{speechPrompts[selectedPrompt]}"
+        </div>
+      </div>
+      
+      {/* Recording Controls */}
       <div className="flex items-center gap-3 mb-4">
         <button 
           className={`px-4 py-2 rounded font-bold ${
@@ -232,12 +297,14 @@ const SpeechAnalysis = ({ onSpeechAnalyzed, facialMetrics }) => {
         </button>
       </div>
       
+      {/* Error Display */}
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
           {error}
         </div>
       )}
       
+      {/* Transcript Display */}
       {transcript && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Speech Transcript</h3>
@@ -247,6 +314,7 @@ const SpeechAnalysis = ({ onSpeechAnalyzed, facialMetrics }) => {
         </div>
       )}
       
+      {/* Analysis Results */}
       {renderResults()}
     </div>
   );
