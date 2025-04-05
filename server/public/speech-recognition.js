@@ -41,151 +41,66 @@ document.addEventListener('DOMContentLoaded', function() {
   // Set initial reading passage
   setRandomPassage();
 
-  // Variables to track recognition attempts
-  let recognitionAttempts = 0;
-  const MAX_RECOGNITION_ATTEMPTS = 3;
-  
-  // Function to setup speech recognition
-  function setupSpeechRecognition() {
-    // Check if browser supports speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      
-      recognition.onstart = function() {
-        isRecording = true;
-        recordingStatus.textContent = "Recording... Speak now.";
-        recordingStatus.style.color = "red";
-        startRecordingBtn.disabled = true;
-        stopRecordingBtn.disabled = false;
-        recognitionAttempts = 0; // Reset attempts counter when successfully started
-      };
-      
-      recognition.onend = function() {
-        isRecording = false;
-        
-        // If we have a transcript, analyze it
-        if (transcript && transcript.trim().length > 0) {
-          recordingStatus.textContent = "Processing speech...";
-          recordingStatus.style.color = "";
-          analyzeSpeech(transcript);
-        } else {
-          recordingStatus.textContent = "No speech detected. Please try again.";
-          startRecordingBtn.disabled = false;
-          stopRecordingBtn.disabled = true;
-        }
-      };
-      
-      recognition.onresult = function(event) {
-        let interimTranscript = "";
-        let finalTranscript = "";
-        
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        
-        transcript = finalTranscript || interimTranscript;
-        transcriptEl.innerHTML = sanitizeHTML(transcript);
-      };
-      
-      recognition.onerror = function(event) {
-        console.error('Speech recognition error', event.error);
-        
-        // Handle network errors with retry logic
-        if (event.error === 'network' && recognitionAttempts < MAX_RECOGNITION_ATTEMPTS) {
-          recognitionAttempts++;
-          recordingStatus.textContent = `Network error. Retrying... (Attempt ${recognitionAttempts}/${MAX_RECOGNITION_ATTEMPTS})`;
-          recordingStatus.style.color = "orange";
-          
-          // Wait a moment then retry
-          setTimeout(() => {
-            try {
-              recognition.start();
-            } catch (e) {
-              recordingStatus.textContent = "Failed to restart recognition after network error.";
-              recordingStatus.style.color = "red";
-              startRecordingBtn.disabled = false;
-              stopRecordingBtn.disabled = true;
-            }
-          }, 1000);
-        } else {
-          // For other errors or too many retries
-          recordingStatus.textContent = "Error: " + event.error + ". Please try again.";
-          recordingStatus.style.color = "red";
-          startRecordingBtn.disabled = false;
-          stopRecordingBtn.disabled = true;
-          
-          // Provide a manual alternative if speech recognition fails
-          const manualEntryNote = document.createElement('p');
-          manualEntryNote.className = 'text-sm mt-2';
-          manualEntryNote.textContent = 'Speech recognition may be unavailable due to network or browser issues. You can still type what you said in the transcript box below and click "Analyze" manually.';
-          
-          // Add a manual entry option
-          const manualInputContainer = document.createElement('div');
-          manualInputContainer.className = 'mt-2';
-          
-          const manualTranscriptInput = document.createElement('textarea');
-          manualTranscriptInput.className = 'w-full p-2 border rounded';
-          manualTranscriptInput.placeholder = 'Type your speech here...';
-          manualTranscriptInput.rows = 3;
-          manualTranscriptInput.id = 'manual-transcript';
-          
-          const analyzeManualBtn = document.createElement('button');
-          analyzeManualBtn.className = 'mt-2 px-4 py-2 bg-blue-500 text-white rounded';
-          analyzeManualBtn.textContent = 'Analyze Manually';
-          analyzeManualBtn.onclick = function() {
-            const manualText = document.getElementById('manual-transcript').value;
-            if (manualText.trim().length > 0) {
-              transcript = manualText;
-              transcriptEl.innerHTML = sanitizeHTML(transcript);
-              analyzeSpeech(transcript);
-            }
-          };
-          
-          manualInputContainer.appendChild(manualTranscriptInput);
-          manualInputContainer.appendChild(analyzeManualBtn);
-          
-          // Clear any previous manual entry options
-          const existingManualEntry = document.getElementById('manual-entry-container');
-          if (existingManualEntry) {
-            existingManualEntry.remove();
-          }
-          
-          // Add the new manual entry option
-          const container = document.createElement('div');
-          container.id = 'manual-entry-container';
-          container.appendChild(manualEntryNote);
-          container.appendChild(manualInputContainer);
-          
-          // Insert after the transcript element
-          transcriptEl.parentNode.insertBefore(container, transcriptEl.nextSibling);
-        }
-      };
-      
-      return true;
-    } else {
-      recordingStatus.textContent = "Speech recognition not supported in this browser.";
+  // Check if browser supports speech recognition
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+      isRecording = true;
+      recordingStatus.textContent = "Recording... Speak now.";
       recordingStatus.style.color = "red";
       startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = false;
+    };
+    
+    recognition.onend = function() {
+      isRecording = false;
+      recordingStatus.textContent = "Processing speech...";
+      recordingStatus.style.color = "";
+      
+      // If we have a transcript, analyze it
+      if (transcript.trim().length > 0) {
+        analyzeSpeech(transcript);
+      } else {
+        recordingStatus.textContent = "No speech detected. Please try again.";
+        startRecordingBtn.disabled = false;
+        stopRecordingBtn.disabled = true;
+      }
+    };
+    
+    recognition.onresult = function(event) {
+      let interimTranscript = "";
+      let finalTranscript = "";
+      
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      transcript = finalTranscript || interimTranscript;
+      transcriptEl.innerHTML = sanitizeHTML(transcript);
+    };
+    
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error', event.error);
+      recordingStatus.textContent = "Error: " + event.error;
+      recordingStatus.style.color = "red";
+      startRecordingBtn.disabled = false;
       stopRecordingBtn.disabled = true;
-      return false;
+    };
+    
+    // Event listeners for recording buttons
+    if (startRecordingBtn && stopRecordingBtn) {
+      startRecordingBtn.addEventListener('click', startRecording);
+      stopRecordingBtn.addEventListener('click', stopRecording);
     }
-  }
-  
-  // Initialize speech recognition
-  const recognitionSupported = setupSpeechRecognition();
-  
-  // Event listeners for recording buttons
-  if (recognitionSupported && startRecordingBtn && stopRecordingBtn) {
-    startRecordingBtn.addEventListener('click', startRecording);
-    stopRecordingBtn.addEventListener('click', stopRecording);
   } else {
     recordingStatus.textContent = "Speech recognition not supported in this browser.";
     startRecordingBtn.disabled = true;
