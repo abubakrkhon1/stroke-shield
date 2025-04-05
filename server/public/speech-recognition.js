@@ -1,4 +1,5 @@
 // Speech Recognition Implementation
+let recognition;
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
@@ -32,136 +33,107 @@ document.addEventListener('DOMContentLoaded', function() {
   // Set initial reading passage
   setRandomPassage();
 
-  // Check if browser supports audio recording API
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  // Check if browser supports speech recognition
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+      isRecording = true;
+      recordingStatus.textContent = "Recording... Speak now.";
+      recordingStatus.style.color = "red";
+      startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = false;
+    };
+    
+    recognition.onend = function() {
+      isRecording = false;
+      recordingStatus.textContent = "Processing speech...";
+      recordingStatus.style.color = "";
+      
+      // If we have a transcript, analyze it
+      if (transcript.trim().length > 0) {
+        analyzeSpeech(transcript);
+      } else {
+        recordingStatus.textContent = "No speech detected. Please try again.";
+        startRecordingBtn.disabled = false;
+        stopRecordingBtn.disabled = true;
+      }
+    };
+    
+    recognition.onresult = function(event) {
+      let interimTranscript = "";
+      let finalTranscript = "";
+      
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      transcript = finalTranscript || interimTranscript;
+      transcriptEl.innerHTML = sanitizeHTML(transcript);
+    };
+    
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error', event.error);
+      recordingStatus.textContent = "Error: " + event.error;
+      recordingStatus.style.color = "red";
+      startRecordingBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
+    };
+    
     // Event listeners for recording buttons
     if (startRecordingBtn && stopRecordingBtn) {
       startRecordingBtn.addEventListener('click', startRecording);
       stopRecordingBtn.addEventListener('click', stopRecording);
     }
   } else {
-    recordingStatus.textContent = "Audio recording not supported in this browser.";
+    recordingStatus.textContent = "Speech recognition not supported in this browser.";
     startRecordingBtn.disabled = true;
     stopRecordingBtn.disabled = true;
   }
   
   // Function to start recording
-  async function startRecording() {
-    try {
-      transcript = "";
-      transcriptEl.innerHTML = "";
-      audioChunks = [];
-      
-      // Request access to the microphone
-      recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Create media recorder
-      mediaRecorder = new MediaRecorder(recordingStream);
-      
-      // Listen for dataavailable event to collect audio chunks
-      mediaRecorder.addEventListener('dataavailable', event => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
-        }
-      });
-      
-      // Listen for stop event to process the complete recording
-      mediaRecorder.addEventListener('stop', processRecording);
-      
-      // Start recording
-      mediaRecorder.start();
-      
-      // Update UI
-      isRecording = true;
-      recordingStatus.textContent = "Recording... Speak now.";
-      recordingStatus.style.color = "red";
-      startRecordingBtn.disabled = true;
-      stopRecordingBtn.disabled = false;
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      recordingStatus.textContent = "Error: Could not access microphone. " + error.message;
-      recordingStatus.style.color = "red";
-    }
+  function startRecording() {
+    transcript = "";
+    transcriptEl.innerHTML = "";
+    
+    // Start the Web Speech API recognition
+    recognition.start();
   }
   
   // Function to stop recording
   function stopRecording() {
-    if (mediaRecorder && isRecording) {
-      // Stop the media recorder
-      mediaRecorder.stop();
+    if (recognition && isRecording) {
+      // Stop the speech recognition
+      recognition.stop();
       
-      // Stop all audio tracks
-      if (recordingStream) {
-        recordingStream.getTracks().forEach(track => track.stop());
-        recordingStream = null;
-      }
-      
-      // Update UI
-      isRecording = false;
-      recordingStatus.textContent = "Processing audio...";
-      startRecordingBtn.disabled = true;
+      // Update UI will happen in the onend handler
       stopRecordingBtn.disabled = true;
     }
   }
   
-  // Process the recording and send to AssemblyAI
-  async function processRecording() {
-    try {
-      // Create audio blob from chunks
-      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-      
-      recordingStatus.textContent = "Uploading audio...";
-      
-      // Upload the audio file to the server
-      const uploadResponse = await fetch('/api/upload-audio', {
-        method: 'POST',
-        body: audioBlob,
-        headers: {
-          'Content-Type': 'audio/wav'
-        }
-      });
-      
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status: ${uploadResponse.status}`);
-      }
-      
-      const uploadData = await uploadResponse.json();
-      
-      // Transcribe the uploaded audio
-      recordingStatus.textContent = "Transcribing speech...";
-      
-      const transcribeResponse = await fetch('/api/transcribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ audioUrl: uploadData.upload_url })
-      });
-      
-      if (!transcribeResponse.ok) {
-        throw new Error(`Transcription failed with status: ${transcribeResponse.status}`);
-      }
-      
-      const transcriptionData = await transcribeResponse.json();
-      
-      // Display the transcript
-      transcript = transcriptionData.transcript || "";
-      transcriptEl.innerHTML = sanitizeHTML(transcript);
+  // Process the recording - we'll switch back to using Web Speech API
+  // for real-time transcription since it provides better real-time capabilities
+  function processRecording() {
+    if (audioChunks.length > 0) {
+      // If we have audio data but no transcript (Web Speech API failed),
+      // we could process the audio through AssemblyAI here
+      // But for now, we'll just use the transcript we collected in real-time
       
       // Analyze the speech if we have a transcript
-      if (transcript.trim().length > 0) {
+      if (transcript && transcript.trim().length > 0) {
         analyzeSpeech(transcript);
       } else {
         recordingStatus.textContent = "No speech detected. Please try again.";
         startRecordingBtn.disabled = false;
       }
-      
-    } catch (error) {
-      console.error('Error processing recording:', error);
-      recordingStatus.textContent = "Error processing speech: " + error.message;
-      recordingStatus.style.color = "red";
-      startRecordingBtn.disabled = false;
     }
   }
   

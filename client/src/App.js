@@ -111,7 +111,7 @@ function App() {
       
       <footer className="bg-gray-800 text-white p-4 mt-8">
         <div className="container mx-auto text-center">
-          <p>Stroke Detection Application - Using MediaPipe and React</p>
+          <p>Stroke Detection Application</p>
           <p className="text-sm mt-2">Disclaimer: This tool is for educational purposes only and not a medical diagnostic device.</p>
         </div>
       </footer>
