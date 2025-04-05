@@ -3,12 +3,32 @@ let recognition;
 let isRecording = false;
 let transcript = "";
 
+// Sample reading passages for stroke assessment
+const readingPassages = [
+  "The quick brown fox jumps over the lazy dog. Please call Stella and ask her to bring these things with her from the store: Six spoons of fresh snow peas, five thick slabs of blue cheese, and maybe a snack for her brother Bob.",
+  
+  "You wish to know all about my grandfather. Well, he is nearly ninety-three years old, yet he still thinks as swiftly as ever. He dresses himself in an old black frock coat, usually several buttons missing.",
+  
+  "The rainbow is a division of white light into many beautiful colors. These take the shape of a long round arch, with its path high above, and its two ends apparently beyond the horizon.",
+  
+  "She sells seashells by the seashore. The shells she sells are surely seashells. So if she sells shells on the seashore, I'm sure she sells seashore shells.",
+  
+  "Kindly pick the dry red rose. The sky was clear, and the stars were twinkling brightly. Please fetch my reading glasses from the kitchen table.",
+  
+  "It was a dark and stormy night with heavy rain. My father enjoys cooking pasta with homemade tomato sauce. We needed to get milk, bread, and butter from the grocery store."
+];
+
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
   const startRecordingBtn = document.getElementById('start-recording');
   const stopRecordingBtn = document.getElementById('stop-recording');
   const recordingStatus = document.getElementById('recording-status');
   const transcriptEl = document.getElementById('transcript');
+  const readingPassageEl = document.getElementById('reading-passage');
+  const newPassageBtn = document.getElementById('new-passage');
+  
+  // Set initial reading passage
+  setRandomPassage();
   
   // Check if browser supports speech recognition
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -92,13 +112,19 @@ document.addEventListener('DOMContentLoaded', function() {
   async function analyzeSpeech(transcript) {
     recordingStatus.textContent = "Analyzing speech...";
     
+    // Get the current reading passage text
+    const readingPassage = readingPassageEl.textContent.trim();
+    
     try {
       const response = await fetch('/api/analyze-speech', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ transcript })
+        body: JSON.stringify({ 
+          transcript,
+          readingPassage
+        })
       });
       
       if (!response.ok) {
@@ -214,9 +240,17 @@ document.addEventListener('DOMContentLoaded', function() {
           riskColor = "";
       }
       
+      // Add information about reading passage or free speech
+      const analysisType = analysis.readingPassage 
+        ? `<span class="text-xs font-medium text-blue-600">Reading Assessment</span>` 
+        : `<span class="text-xs font-medium text-purple-600">Free Speech</span>`;
+        
       analysisEl.innerHTML = `
-        <div class="flex justify-between">
-          <span class="font-semibold">${formattedDate}</span>
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="font-semibold">${formattedDate}</span>
+            ${analysisType}
+          </div>
           <span class="font-bold ${riskColor}">${analysis.overallRisk.toUpperCase()}</span>
         </div>
         <p class="text-sm mt-1">${sanitizeHTML(transcriptPreview)}</p>
@@ -231,4 +265,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Fetch recent speech analyses on page load
   fetchRecentSpeechAnalyses();
+  
+  // Function to set a random reading passage
+  function setRandomPassage() {
+    const randomIndex = Math.floor(Math.random() * readingPassages.length);
+    readingPassageEl.textContent = readingPassages[randomIndex];
+  }
+  
+  // Event listener for new passage button
+  newPassageBtn.addEventListener('click', setRandomPassage);
 });

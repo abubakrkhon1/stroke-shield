@@ -73,39 +73,72 @@ app.get('/api/assessments/recent', (req, res) => {
 // Analyze speech using Google AI
 app.post('/api/analyze-speech', async (req, res) => {
   try {
-    const { transcript } = req.body;
+    const { transcript, readingPassage } = req.body;
     
     if (!transcript) {
       return res.status(400).json({ error: 'Missing speech transcript' });
     }
     
-    // Configure the generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Configure the generative model - use the latest available model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     
-    // Analyze speech for stroke indicators
-    const prompt = `
-    Analyze the following speech transcript for potential stroke symptoms:
-    "${transcript}"
+    // Create a prompt based on whether we have a reading passage or not
+    let promptText;
     
-    Focus on:
-    1. Speech coherence and clarity
-    2. Word-finding difficulties
-    3. Slurred speech patterns
-    4. Grammatical errors beyond normal speech
-    5. Repetition or confusion
+    if (readingPassage) {
+      // If we have both the transcript and the reading passage, we can do a comparison
+      promptText = `
+      Analyze the following speech transcript for potential stroke symptoms. The person was asked to read a specific passage, so compare their speech with the expected text:
+      
+      Expected reading passage: "${readingPassage}"
+      
+      Actual transcript: "${transcript}"
+      
+      Focus on:
+      1. Speech coherence and clarity
+      2. Word-finding difficulties (missing, substituted, or incorrect words)
+      3. Slurred speech patterns
+      4. Pronunciation errors that could indicate stroke
+      5. Sentence completion and flow
+      6. Omissions or additions compared to the expected reading passage
+      
+      Provide an analysis with:
+      - A coherence score (0-100) - how well their speech matches the expected passage
+      - A slurred speech score (0-100) - indication of slurring or unclear pronunciation
+      - Word finding difficulty score (0-100) - measure of word substitutions or omissions
+      - Overall stroke risk based on speech (low, medium, high)
+      - Key observations including specific words or phrases that show potential issues
+      `;
+    } else {
+      // Fall back to general speech analysis if no reading passage is provided
+      promptText = `
+      Analyze the following speech transcript for potential stroke symptoms:
+      "${transcript}"
+      
+      Focus on:
+      1. Speech coherence and clarity
+      2. Word-finding difficulties
+      3. Slurred speech patterns
+      4. Grammatical errors beyond normal speech
+      5. Repetition or confusion
+      
+      Provide an analysis with:
+      - A coherence score (0-100)
+      - A slurred speech score (0-100)
+      - Word finding difficulty score (0-100)
+      - Overall stroke risk based on speech (low, medium, high)
+      - Key observations
+      `;
+    }
     
-    Provide an analysis with:
-    - A coherence score (0-100)
-    - A slurred speech score (0-100)
-    - Word finding difficulty score (0-100)
-    - Overall stroke risk based on speech (low, medium, high)
-    - Key observations
+    // Add the response format instructions
+    const prompt = `${promptText}
     
     Format the response as a JSON object with these exact fields: 
     {
       "coherenceScore": number,
       "slurredSpeechScore": number,
-      "wordFindingScore": number,
+      "wordFindingScore": number, 
       "overallRisk": "low"|"medium"|"high",
       "observations": string[]
     }
@@ -135,6 +168,7 @@ app.post('/api/analyze-speech', async (req, res) => {
       const speechAnalysis = {
         id,
         transcript,
+        readingPassage, // Store the reading passage if available
         ...analysisData,
         timestamp: new Date().toISOString()
       };
