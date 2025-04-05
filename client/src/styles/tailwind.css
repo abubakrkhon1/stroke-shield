@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-100 font-sans;
+}
+
+.detection-container {
+  @apply relative;
+}
+
+.detection-canvas {
+  @apply absolute top-0 left-0 w-full h-full;
+}
+
+.warning-high {
+  @apply bg-red-500 text-white font-bold py-2 px-4 rounded;
+}
+
+.warning-medium {
+  @apply bg-yellow-500 text-white font-bold py-2 px-4 rounded;
+}
+
+.warning-low {
+  @apply bg-green-500 text-white font-bold py-2 px-4 rounded;
+}
+
+.results-container {
+  @apply bg-white rounded-lg shadow-lg p-4 m-4;
+}
+
+.metric-card {
+  @apply bg-white rounded-lg shadow p-4 mb-4;
+}
+
+.metric-value {
+  @apply text-2xl font-bold;
+}
+
+.metric-label {
+  @apply text-gray-500 text-sm;
+}
