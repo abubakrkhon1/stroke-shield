@@ -13,26 +13,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "StrokeDetection"
+args = "BuildClientAndServe"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "BuildClientAndServe"
-
-[[workflows.workflow]]
-name = "StrokeDetection"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd server && npm install && NODE_ENV=production PORT=5000 node index.js"
-waitForPort = 5000
+args = "StrokeDetectionServer"
 
 [[workflows.workflow]]
 name = "BuildClientAndServe"
@@ -47,6 +32,21 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd client && npm install && npm run build && cd ../server && npm install && NODE_ENV=production PORT=5000 node index.js"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "StrokeDetectionServer"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd server && npm install && NODE_ENV=production PORT=5000 node index.js"
 waitForPort = 5000
 
 [deployment]

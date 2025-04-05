@@ -221,6 +221,57 @@
           <p>Complete all three assessments (facial asymmetry, posture, and speech analysis) to get an overall stroke risk assessment.</p>
         </div>
       </div>
+    </main>
+    
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+      <div class="container mx-auto text-center">
+        <p>Stroke Detection Application - Using MediaPipe and React</p>
+        <p class="text-sm mt-2">Disclaimer: This tool is for educational purposes only and not a medical diagnostic device.</p>
+      </div>
+    </footer>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // DOM Elements
+        const webcamEl = document.getElementById('webcam');
+        const detectionCanvas = document.getElementById('detection-canvas');
+        const canvasCtx = detectionCanvas.getContext('2d');
+        const toggleButton = document.getElementById('detection-toggle');
+        const clearButton = document.getElementById('clear-results');
+        const faceMeshToggle = document.getElementById('face-mesh-toggle');
+        const poseToggle = document.getElementById('pose-toggle');
+        const symmetryLineToggle = document.getElementById('symmetry-line-toggle');
+        const sensitivitySlider = document.getElementById('detection-sensitivity');
+        const sensitivityValue = document.getElementById('sensitivity-value');
+        
+        // MediaPipe objects
+        let faceMesh;
+        let pose;
+        let camera;
+        
+        // State variables
+        let lastVideoTime = -1;
+        let isDetecting = false;
+        let showFaceMesh = true;
+        let showPose = false;
+        let showSymmetryLine = true;
+        let sensitivity = 5;
+        
+        // Current facial landmarks
+        let currentFaceLandmarks = null;
+        let currentPoseLandmarks = null;
+        
+        // Store metrics for smoothing
+        let metricsHistory = {
+          eyeAsymmetry: [],
+          mouthAsymmetry: [],
+          eyebrowAsymmetry: [],
+          shoulderImbalance: [],
+          headTilt: [],
+          bodyLean: []
+        };
+        
+        // Default metrics values
         let currentMetrics = {
           eyeAsymmetry: 0,
           mouthAsymmetry: 0,
