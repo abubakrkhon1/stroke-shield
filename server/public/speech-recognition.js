@@ -6,19 +6,27 @@ let isRecording = false;
 let transcript = "";
 let recordingStream = null;
 
-// Sample reading passages for stroke assessment
+// Sample reading passages for stroke assessment (shorter, max 15 words)
 const readingPassages = [
-  "The quick brown fox jumps over the lazy dog. Please call Stella and ask her to bring these things with her from the store: Six spoons of fresh snow peas, five thick slabs of blue cheese, and maybe a snack for her brother Bob.",
+  "The quick brown fox jumps over the lazy dog.",
   
-  "You wish to know all about my grandfather. Well, he is nearly ninety-three years old, yet he still thinks as swiftly as ever. He dresses himself in an old black frock coat, usually several buttons missing.",
+  "She sells seashells by the seashore.",
   
-  "The rainbow is a division of white light into many beautiful colors. These take the shape of a long round arch, with its path high above, and its two ends apparently beyond the horizon.",
+  "The rainbow is a division of white light into many beautiful colors.",
   
-  "She sells seashells by the seashore. The shells she sells are surely seashells. So if she sells shells on the seashore, I'm sure she sells seashore shells.",
+  "Please fetch my reading glasses from the kitchen table.",
   
-  "Kindly pick the dry red rose. The sky was clear, and the stars were twinkling brightly. Please fetch my reading glasses from the kitchen table.",
+  "My father enjoys cooking pasta with homemade tomato sauce.",
   
-  "It was a dark and stormy night with heavy rain. My father enjoys cooking pasta with homemade tomato sauce. We needed to get milk, bread, and butter from the grocery store."
+  "The sky was clear, and the stars were twinkling brightly.",
+  
+  "Can you please bring six spoons of fresh snow peas?",
+  
+  "How vexingly quick daft zebras jump!",
+  
+  "Pack my box with five dozen liquor jugs.",
+  
+  "Amazingly few discotheques provide jukeboxes."
 ];
 
 document.addEventListener('DOMContentLoaded', function() {
