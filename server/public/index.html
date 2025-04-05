@@ -77,6 +77,16 @@
               Clear Results
             </button>
           </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <div class="flex items-center">
+              <input type="checkbox" id="face-mesh-toggle" class="mr-2" checked>
+              <label for="face-mesh-toggle">Show Face Mesh</label>
+            </div>
+            <div class="flex items-center ml-4">
+              <input type="checkbox" id="pose-toggle" class="mr-2">
+              <label for="pose-toggle">Show Pose Detection</label>
+            </div>
+          </div>
         </div>
         
         <div class="bg-white rounded-lg shadow-lg p-4">
@@ -163,8 +173,19 @@
       document.addEventListener('DOMContentLoaded', function() {
         const webcamEl = document.getElementById('webcam');
         const detectionCanvas = document.getElementById('detection-canvas');
+        const canvasCtx = detectionCanvas.getContext('2d');
         const toggleButton = document.getElementById('detection-toggle');
         const clearButton = document.getElementById('clear-results');
+        const faceMeshToggle = document.getElementById('face-mesh-toggle');
+        const poseToggle = document.getElementById('pose-toggle');
+        
+        let faceMesh;
+        let pose;
+        let camera;
+        let lastVideoTime = -1;
+        let isDetecting = false;
+        let showFaceMesh = true;
+        let showPose = false;
         
         // Initialize metrics chart
         const ctx = document.getElementById('metrics-chart').getContext('2d');
@@ -218,7 +239,92 @@
           }
         });
         
-        let isDetecting = false;
+        // Initialize MediaPipe FaceMesh
+        function setupFaceMesh() {
+          faceMesh = new FaceMesh({
+            locateFile: (file) => {
+              return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+            }
+          });
+          
+          faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          
+          faceMesh.onResults(onFaceMeshResults);
+        }
+        
+        // Initialize MediaPipe Pose
+        function setupPose() {
+          pose = new Pose({
+            locateFile: (file) => {
+              return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }
+          });
+          
+          pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            smoothSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          
+          pose.onResults(onPoseResults);
+        }
+        
+        // Face Mesh results handler
+        function onFaceMeshResults(results) {
+          if (!isDetecting) return;
+          
+          canvasCtx.save();
+          canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+          
+          if (results.multiFaceLandmarks && showFaceMesh) {
+            for (const landmarks of results.multiFaceLandmarks) {
+              drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, 
+                            {color: '#C0C0C070', lineWidth: 1});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
+                            {color: '#FF3030', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, 
+                            {color: '#30FF30', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, 
+                            {color: '#FF3030', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, 
+                            {color: '#30FF30', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, 
+                            {color: '#FF3030', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_IRIS, 
+                            {color: '#30FF30', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, 
+                            {color: '#E0E0E0', lineWidth: 2});
+              drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, 
+                            {color: '#E0E0E0', lineWidth: 2});
+            }
+          }
+          
+          canvasCtx.restore();
+        }
+        
+        // Pose results handler
+        function onPoseResults(results) {
+          if (!isDetecting) return;
+          
+          canvasCtx.save();
+          
+          if (results.poseLandmarks && showPose) {
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+                          {color: '#00FF00', lineWidth: 4});
+            drawLandmarks(canvasCtx, results.poseLandmarks,
+                         {color: '#FF0000', lineWidth: 2});
+          }
+          
+          canvasCtx.restore();
+        }
         
         // Toggle detection button
         toggleButton.addEventListener('click', function() {
@@ -254,34 +360,90 @@
           // Reset chart
           metricsChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
           metricsChart.update();
+          
+          // Clear canvas
+          canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+        });
+        
+        // Face mesh toggle
+        faceMeshToggle.addEventListener('change', function() {
+          showFaceMesh = this.checked;
+          if (!showFaceMesh) {
+            // Clear the canvas
+            canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+          }
+        });
+        
+        // Pose toggle
+        poseToggle.addEventListener('change', function() {
+          showPose = this.checked;
+          if (!showPose) {
+            // Clear the canvas
+            canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+          }
         });
         
         function startCamera() {
+          setupFaceMesh();
+          setupPose();
+          
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ video: true })
               .then(function(stream) {
                 webcamEl.srcObject = stream;
                 
-                // For demo purposes - simulate detection with random metrics
-                simulateDetection();
+                // Set up camera utilities
+                camera = new Camera(webcamEl, {
+                  onFrame: async () => {
+                    canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+                    
+                    if (showFaceMesh) {
+                      await faceMesh.send({image: webcamEl});
+                    }
+                    
+                    if (showPose) {
+                      await pose.send({image: webcamEl});
+                    }
+                    
+                    // Simulate metrics
+                    updateMetrics();
+                  },
+                  width: 640,
+                  height: 480
+                });
+                
+                camera.start();
               })
               .catch(function(error) {
                 console.error('Could not access the camera: ', error);
                 alert('Could not access the camera. Please check your permissions.');
+                
+                // Fall back to simulation if camera fails
+                simulateDetection();
               });
           } else {
             alert('Your browser does not support camera access. Please try a different browser.');
+            
+            // Fall back to simulation if camera not supported
+            simulateDetection();
           }
         }
         
         function stopCamera() {
+          if (camera) {
+            camera.stop();
+          }
+          
           if (webcamEl.srcObject) {
             webcamEl.srcObject.getTracks().forEach(track => track.stop());
             webcamEl.srcObject = null;
           }
+          
+          // Clear canvas
+          canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
         }
         
-        function simulateDetection() {
+        function updateMetrics() {
           if (!isDetecting) return;
           
           // Simulate asymmetry metrics
@@ -372,6 +534,13 @@
             li.className = 'mb-1';
             findingsList.appendChild(li);
           });
+        }
+        
+        function simulateDetection() {
+          if (!isDetecting) return;
+          
+          // Update metrics
+          updateMetrics();
           
           // Continue simulation if still detecting
           if (isDetecting) {
