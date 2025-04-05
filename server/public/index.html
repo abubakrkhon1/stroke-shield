@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Stroke Detection Application using MediaPipe"
+    />
+    <title>Stroke Detection App</title>
+    <!-- Include MediaPipe dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <!-- Include Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .detection-container {
+        position: relative;
+      }
+      .detection-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .metric-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .metric-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <header class="bg-blue-600 text-white p-4">
+      <div class="container mx-auto">
+        <h1 class="text-3xl font-bold">Stroke Detection System</h1>
+        <p class="mt-2">Real-time analysis of facial asymmetry and body posture</p>
+      </div>
+    </header>
+    
+    <main class="container mx-auto p-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-lg p-4">
+          <h2 class="text-xl font-bold mb-4">Camera Input</h2>
+          <div class="detection-container">
+            <video id="webcam" autoplay playsinline class="w-full h-auto rounded" style="max-height: 480px;"></video>
+            <canvas id="detection-canvas" class="detection-canvas" width="640" height="480"></canvas>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button 
+              id="detection-toggle"
+              class="px-4 py-2 rounded font-bold bg-green-500 text-white"
+            >
+              Start Detection
+            </button>
+            <button 
+              id="clear-results"
+              class="px-4 py-2 bg-gray-300 rounded font-bold"
+            >
+              Clear Results
+            </button>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-lg p-4">
+          <h2 class="text-xl font-bold mb-4">Detection Results</h2>
+          
+          <!-- Risk Level Indicator -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Risk Assessment</h3>
+            <div id="risk-indicator" class="px-4 py-2 rounded text-white font-bold text-center bg-gray-500">
+              Awaiting Analysis
+            </div>
+          </div>
+          
+          <!-- Visualization -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Asymmetry Metrics</h3>
+            <div class="bg-white rounded-lg p-2 shadow-inner">
+              <canvas id="metrics-chart" height="200"></canvas>
+            </div>
+          </div>
+          
+          <!-- Metrics Grid -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="metric-card">
+              <div class="metric-label">Eye Asymmetry</div>
+              <div id="eye-asymmetry" class="metric-value">N/A</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Mouth Asymmetry</div>
+              <div id="mouth-asymmetry" class="metric-value">N/A</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Eyebrow Asymmetry</div>
+              <div id="eyebrow-asymmetry" class="metric-value">N/A</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Overall Asymmetry</div>
+              <div id="overall-asymmetry" class="metric-value">N/A</div>
+            </div>
+          </div>
+          
+          <!-- Posture Metrics -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="metric-card">
+              <div class="metric-label">Shoulder Imbalance</div>
+              <div id="shoulder-imbalance" class="metric-value">N/A</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Head Tilt</div>
+              <div id="head-tilt" class="metric-value">N/A</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Body Lean</div>
+              <div id="body-lean" class="metric-value">N/A</div>
+            </div>
+          </div>
+          
+          <!-- Findings -->
+          <div>
+            <h3 class="text-lg font-semibold mb-2">Key Findings</h3>
+            <ul id="findings-list" class="list-disc pl-5">
+              <li>No findings yet. Start detection to analyze facial asymmetry and posture.</li>
+            </ul>
+          </div>
+          
+          <!-- Disclaimer -->
+          <div class="mt-6 text-sm text-gray-600 bg-gray-100 p-3 rounded">
+            <strong>Disclaimer:</strong> This tool is not a medical device and should not be used for medical diagnosis. 
+            If you suspect a stroke, call emergency services immediately (911 in the US). 
+            Remember the FAST method: Facial drooping, Arm weakness, Speech difficulties, Time to call emergency services.
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+      <div class="container mx-auto text-center">
+        <p>Stroke Detection Application - Using MediaPipe and React</p>
+        <p class="text-sm mt-2">Disclaimer: This tool is for educational purposes only and not a medical diagnostic device.</p>
+      </div>
+    </footer>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const webcamEl = document.getElementById('webcam');
+        const detectionCanvas = document.getElementById('detection-canvas');
+        const toggleButton = document.getElementById('detection-toggle');
+        const clearButton = document.getElementById('clear-results');
+        
+        // Initialize metrics chart
+        const ctx = document.getElementById('metrics-chart').getContext('2d');
+        const metricsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: [
+              'Eye Asymmetry', 
+              'Mouth Asymmetry', 
+              'Eyebrow Asymmetry', 
+              'Overall Facial Asymmetry',
+              'Shoulder Imbalance',
+              'Head Tilt',
+              'Body Lean'
+            ],
+            datasets: [{
+              label: 'Asymmetry Metrics (%)',
+              data: [0, 0, 0, 0, 0, 0, 0],
+              backgroundColor: [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+                'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(153, 102, 255, 0.6)',
+                'rgba(255, 159, 64, 0.6)',
+                'rgba(199, 199, 199, 0.6)'
+              ],
+              borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(199, 199, 199, 1)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                title: {
+                  display: true,
+                  text: 'Asymmetry (%)'
+                }
+              }
+            }
+          }
+        });
+        
+        let isDetecting = false;
+        
+        // Toggle detection button
+        toggleButton.addEventListener('click', function() {
+          isDetecting = !isDetecting;
+          if (isDetecting) {
+            startCamera();
+            this.textContent = 'Stop Detection';
+            this.classList.remove('bg-green-500');
+            this.classList.add('bg-red-500');
+          } else {
+            stopCamera();
+            this.textContent = 'Start Detection';
+            this.classList.remove('bg-red-500');
+            this.classList.add('bg-green-500');
+          }
+        });
+        
+        // Clear results button
+        clearButton.addEventListener('click', function() {
+          document.getElementById('eye-asymmetry').textContent = 'N/A';
+          document.getElementById('mouth-asymmetry').textContent = 'N/A';
+          document.getElementById('eyebrow-asymmetry').textContent = 'N/A';
+          document.getElementById('overall-asymmetry').textContent = 'N/A';
+          document.getElementById('shoulder-imbalance').textContent = 'N/A';
+          document.getElementById('head-tilt').textContent = 'N/A';
+          document.getElementById('body-lean').textContent = 'N/A';
+          
+          document.getElementById('risk-indicator').className = 'px-4 py-2 rounded text-white font-bold text-center bg-gray-500';
+          document.getElementById('risk-indicator').textContent = 'Awaiting Analysis';
+          
+          document.getElementById('findings-list').innerHTML = '<li>No findings yet. Start detection to analyze facial asymmetry and posture.</li>';
+          
+          // Reset chart
+          metricsChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
+          metricsChart.update();
+        });
+        
+        function startCamera() {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+              .then(function(stream) {
+                webcamEl.srcObject = stream;
+                
+                // For demo purposes - simulate detection with random metrics
+                simulateDetection();
+              })
+              .catch(function(error) {
+                console.error('Could not access the camera: ', error);
+                alert('Could not access the camera. Please check your permissions.');
+              });
+          } else {
+            alert('Your browser does not support camera access. Please try a different browser.');
+          }
+        }
+        
+        function stopCamera() {
+          if (webcamEl.srcObject) {
+            webcamEl.srcObject.getTracks().forEach(track => track.stop());
+            webcamEl.srcObject = null;
+          }
+        }
+        
+        function simulateDetection() {
+          if (!isDetecting) return;
+          
+          // Simulate asymmetry metrics
+          const eyeAsymmetry = Math.random() * 0.4;
+          const mouthAsymmetry = Math.random() * 0.3;
+          const eyebrowAsymmetry = Math.random() * 0.35;
+          const overallAsymmetry = (eyeAsymmetry * 0.4) + (mouthAsymmetry * 0.4) + (eyebrowAsymmetry * 0.2);
+          
+          // Simulate posture metrics
+          const shoulderImbalance = Math.random() * 0.25;
+          const headTilt = Math.random() * 0.3;
+          const bodyLean = Math.random() * 0.2;
+          
+          // Update UI
+          document.getElementById('eye-asymmetry').textContent = (eyeAsymmetry * 100).toFixed(2) + '%';
+          document.getElementById('mouth-asymmetry').textContent = (mouthAsymmetry * 100).toFixed(2) + '%';
+          document.getElementById('eyebrow-asymmetry').textContent = (eyebrowAsymmetry * 100).toFixed(2) + '%';
+          document.getElementById('overall-asymmetry').textContent = (overallAsymmetry * 100).toFixed(2) + '%';
+          
+          document.getElementById('shoulder-imbalance').textContent = (shoulderImbalance * 100).toFixed(2) + '%';
+          document.getElementById('head-tilt').textContent = (headTilt * 100).toFixed(2) + '%';
+          document.getElementById('body-lean').textContent = (bodyLean * 100).toFixed(2) + '%';
+          
+          // Update chart
+          metricsChart.data.datasets[0].data = [
+            eyeAsymmetry * 100, 
+            mouthAsymmetry * 100, 
+            eyebrowAsymmetry * 100, 
+            overallAsymmetry * 100,
+            shoulderImbalance * 100,
+            headTilt * 100,
+            bodyLean * 100
+          ];
+          metricsChart.update();
+          
+          // Determine risk level based on metrics
+          let riskLevel = 'low';
+          let riskColor = 'bg-green-500';
+          let findings = [];
+          
+          const LOW_THRESHOLD = 0.1;
+          const MEDIUM_THRESHOLD = 0.2;
+          const HIGH_THRESHOLD = 0.3;
+          
+          if (eyeAsymmetry > HIGH_THRESHOLD || mouthAsymmetry > HIGH_THRESHOLD || overallAsymmetry > HIGH_THRESHOLD) {
+            riskLevel = 'high';
+            riskColor = 'bg-red-500';
+            findings.push('Significant facial asymmetry detected');
+            
+            if (eyeAsymmetry > HIGH_THRESHOLD) {
+              findings.push('High eye asymmetry - possible facial drooping');
+            }
+            if (mouthAsymmetry > HIGH_THRESHOLD) {
+              findings.push('High mouth asymmetry - possible facial weakness');
+            }
+            
+            findings.push('Multiple high-risk indicators detected. Consider seeking immediate medical evaluation.');
+          } else if (eyeAsymmetry > MEDIUM_THRESHOLD || mouthAsymmetry > MEDIUM_THRESHOLD || 
+                    shoulderImbalance > MEDIUM_THRESHOLD || overallAsymmetry > MEDIUM_THRESHOLD) {
+            riskLevel = 'medium';
+            riskColor = 'bg-yellow-500';
+            findings.push('Moderate asymmetry detected');
+            findings.push('Some concerning asymmetry detected. Consider consulting a healthcare provider.');
+          } else {
+            findings.push('No significant asymmetry indicators detected at this time.');
+          }
+          
+          findings.push('Remember FAST for stroke: Face drooping, Arm weakness, Speech difficulty, Time to call emergency services.');
+          
+          // Update risk indicator
+          const riskIndicator = document.getElementById('risk-indicator');
+          riskIndicator.className = `px-4 py-2 rounded text-white font-bold text-center ${riskColor}`;
+          
+          if (riskLevel === 'high') {
+            riskIndicator.textContent = 'High Risk - Seek Medical Attention';
+          } else if (riskLevel === 'medium') {
+            riskIndicator.textContent = 'Medium Risk - Consider Medical Consultation';
+          } else {
+            riskIndicator.textContent = 'Low Risk - Continue Monitoring';
+          }
+          
+          // Update findings list
+          const findingsList = document.getElementById('findings-list');
+          findingsList.innerHTML = '';
+          findings.forEach(finding => {
+            const li = document.createElement('li');
+            li.textContent = finding;
+            li.className = 'mb-1';
+            findingsList.appendChild(li);
+          });
+          
+          // Continue simulation if still detecting
+          if (isDetecting) {
+            setTimeout(simulateDetection, 1000);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

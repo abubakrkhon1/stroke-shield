@@ -13,7 +13,10 @@ const db = createMemoryDb();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files - first try the React build, then fall back to static public folder
 app.use(express.static(path.join(__dirname, '../client/build')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API endpoints
 app.get('/api/health', (req, res) => {
@@ -64,7 +67,16 @@ app.get('/api/assessments/recent', (req, res) => {
 
 // Serve the static files from React app for any other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  // Try to serve the React build first, then fall back to public folder
+  const reactBuildPath = path.join(__dirname, '../client/build', 'index.html');
+  const publicPath = path.join(__dirname, 'public', 'index.html');
+  
+  // Check if React build exists, otherwise serve from public
+  if (require('fs').existsSync(reactBuildPath)) {
+    res.sendFile(reactBuildPath);
+  } else {
+    res.sendFile(publicPath);
+  }
 });
 
 // Start the server
