@@ -1,118 +1,155 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const StrokeAssessment = ({ asymmetryMetrics, postureMetrics, onRiskUpdate, onFindingsUpdate }) => {
-  useEffect(() => {
-    // Skip assessment if metrics aren't available
-    if (Object.keys(asymmetryMetrics).length === 0 || Object.keys(postureMetrics).length === 0) {
-      return;
-    }
-    
-    // Extract metrics
-    const { eyeAsymmetry, mouthAsymmetry, eyebrowAsymmetry, overallAsymmetry } = asymmetryMetrics;
-    const { shoulderImbalance, headTilt, bodyLean } = postureMetrics;
-    
-    // Initialize findings array
-    const findings = [];
-    
-    // Define thresholds
-    const LOW_THRESHOLD = 0.1; // 10%
-    const MEDIUM_THRESHOLD = 0.2; // 20%
-    const HIGH_THRESHOLD = 0.3; // 30%
-    
-    // Calculate risk score (weighted average of metrics)
-    let riskScore = 0;
-    let highRiskIndicators = 0;
-    
-    // Assess facial asymmetry (higher weight)
-    if (eyeAsymmetry > HIGH_THRESHOLD) {
-      findings.push("Significant eye asymmetry detected - possible facial drooping");
-      riskScore += 3;
-      highRiskIndicators++;
-    } else if (eyeAsymmetry > MEDIUM_THRESHOLD) {
-      findings.push("Moderate eye asymmetry detected");
-      riskScore += 2;
-    } else if (eyeAsymmetry > LOW_THRESHOLD) {
-      findings.push("Mild eye asymmetry detected");
-      riskScore += 1;
-    }
-    
-    if (mouthAsymmetry > HIGH_THRESHOLD) {
-      findings.push("Significant mouth asymmetry detected - possible facial drooping");
-      riskScore += 3;
-      highRiskIndicators++;
-    } else if (mouthAsymmetry > MEDIUM_THRESHOLD) {
-      findings.push("Moderate mouth asymmetry detected");
-      riskScore += 2;
-    } else if (mouthAsymmetry > LOW_THRESHOLD) {
-      findings.push("Mild mouth asymmetry detected");
-      riskScore += 1;
-    }
-    
-    if (eyebrowAsymmetry > HIGH_THRESHOLD) {
-      findings.push("Significant eyebrow asymmetry detected");
-      riskScore += 2;
-    } else if (eyebrowAsymmetry > MEDIUM_THRESHOLD) {
-      findings.push("Moderate eyebrow asymmetry detected");
-      riskScore += 1;
-    }
-    
-    if (overallAsymmetry > HIGH_THRESHOLD) {
-      findings.push("High overall facial asymmetry detected");
-      riskScore += 3;
-      highRiskIndicators++;
-    } else if (overallAsymmetry > MEDIUM_THRESHOLD) {
-      findings.push("Moderate overall facial asymmetry");
-      riskScore += 2;
-    }
-    
-    // Assess posture (lower weight)
-    if (shoulderImbalance > HIGH_THRESHOLD) {
-      findings.push("Significant shoulder imbalance detected - possible weakness on one side");
-      riskScore += 2;
-      highRiskIndicators++;
-    } else if (shoulderImbalance > MEDIUM_THRESHOLD) {
-      findings.push("Moderate shoulder imbalance detected");
-      riskScore += 1;
-    }
-    
-    if (headTilt > HIGH_THRESHOLD) {
-      findings.push("Significant head tilt detected");
-      riskScore += 2;
-    } else if (headTilt > MEDIUM_THRESHOLD) {
-      findings.push("Moderate head tilt detected");
-      riskScore += 1;
-    }
-    
-    if (bodyLean > HIGH_THRESHOLD) {
-      findings.push("Significant body leaning detected - possible balance issues");
-      riskScore += 2;
-    } else if (bodyLean > MEDIUM_THRESHOLD) {
-      findings.push("Moderate body leaning detected");
-      riskScore += 1;
-    }
-    
-    // Determine overall risk level
-    let riskLevel = 'low';
-    if (riskScore >= 6 || highRiskIndicators >= 2) {
-      riskLevel = 'high';
-      findings.push("Multiple high-risk indicators detected. Consider seeking immediate medical evaluation.");
-    } else if (riskScore >= 3) {
-      riskLevel = 'medium';
-      findings.push("Some concerning asymmetry detected. Consider consulting a healthcare provider.");
-    } else {
-      findings.push("No significant asymmetry indicators detected at this time.");
-    }
-    
-    // Add stroke awareness information
-    findings.push("Remember FAST for stroke: Face drooping, Arm weakness, Speech difficulty, Time to call emergency services.");
-    
-    // Update risk level and findings
-    onRiskUpdate(riskLevel);
-    onFindingsUpdate(findings);
-    
-  }, [asymmetryMetrics, postureMetrics, onRiskUpdate, onFindingsUpdate]);
+/**
+ * Component for displaying overall stroke assessment results
+ * Combines facial asymmetry, posture, and speech analysis
+ */
+const StrokeAssessment = ({ facialAsymmetry, postureAnalysis, speechAnalysis }) => {
+  const [riskLevel, setRiskLevel] = useState('low');
+  const [riskScore, setRiskScore] = useState(0);
+  const [assessmentTime, setAssessmentTime] = useState(new Date());
   
-  return null; // This component doesn't render anything
+  useEffect(() => {
+    // Calculate overall risk based on facial asymmetry, posture, and speech
+    const calculateOverallRisk = () => {
+      // Start with base score from facial asymmetry (0-1)
+      let overallScore = facialAsymmetry.overallAsymmetry || 0;
+      
+      // Add weight from posture if available (0-0.5)
+      if (postureAnalysis && postureAnalysis.shoulderImbalance) {
+        overallScore += postureAnalysis.shoulderImbalance * 0.3;
+      }
+      
+      // Add weight from speech analysis if available (0-0.5)
+      if (speechAnalysis) {
+        if (speechAnalysis.slurredSpeech) {
+          overallScore += 0.3;
+        }
+        
+        // Add score based on clarity and fluency
+        if (speechAnalysis.clarity !== undefined) {
+          overallScore += (100 - speechAnalysis.clarity) / 100 * 0.15;
+        }
+        
+        if (speechAnalysis.fluency !== undefined) {
+          overallScore += (100 - speechAnalysis.fluency) / 100 * 0.15;
+        }
+      }
+      
+      // Clamp score between 0-1
+      overallScore = Math.min(Math.max(overallScore, 0), 1);
+      
+      // Update risk level based on score
+      let level = 'low';
+      if (overallScore > 0.7) {
+        level = 'high';
+      } else if (overallScore > 0.3) {
+        level = 'medium';
+      }
+      
+      setRiskScore(overallScore);
+      setRiskLevel(level);
+      setAssessmentTime(new Date());
+    };
+    
+    calculateOverallRisk();
+  }, [facialAsymmetry, postureAnalysis, speechAnalysis]);
+  
+  // Different messages based on risk level
+  const getRiskMessage = () => {
+    switch (riskLevel) {
+      case 'high':
+        return 'SEEK IMMEDIATE MEDICAL ATTENTION';
+      case 'medium':
+        return 'Contact a healthcare provider promptly';
+      default:
+        return 'Low risk indicators';
+    }
+  };
+  
+  // Render risk level indicator with different styles
+  return (
+    <div className="assessment-panel">
+      <h2>Stroke Risk Assessment</h2>
+      <div className={`risk-indicator ${riskLevel}-risk`}>
+        <div className="risk-level">{riskLevel.toUpperCase()} RISK</div>
+        <div className="risk-message">{getRiskMessage()}</div>
+        <div className="risk-score">Score: {(riskScore * 100).toFixed(1)}%</div>
+        <div className="risk-time">
+          Assessed at: {assessmentTime.toLocaleTimeString()}
+        </div>
+      </div>
+      <div className="assessment-details">
+        <div className="detail-item">
+          <span>Facial Asymmetry:</span>
+          <span>{((facialAsymmetry?.overallAsymmetry || 0) * 100).toFixed(1)}%</span>
+        </div>
+        {postureAnalysis && (
+          <div className="detail-item">
+            <span>Posture Imbalance:</span>
+            <span>{((postureAnalysis?.shoulderImbalance || 0) * 100).toFixed(1)}%</span>
+          </div>
+        )}
+        {speechAnalysis && (
+          <div className="detail-item">
+            <span>Speech Analysis:</span>
+            <span>
+              {speechAnalysis.slurredSpeech ? 'Slurred' : 'Normal'} 
+              {' '}(Clarity: {speechAnalysis.clarity || 0}%, Fluency: {speechAnalysis.fluency || 0}%)
+            </span>
+          </div>
+        )}
+      </div>
+      
+      {/* FAST indicators section */}
+      <div className="fast-indicators">
+        <h3>FAST Indicators</h3>
+        <div className="fast-grid">
+          <div className={`fast-item ${(facialAsymmetry?.overallAsymmetry || 0) > 0.2 ? 'active' : ''}`}>
+            <div className="fast-letter">F</div>
+            <div className="fast-description">
+              <strong>Face:</strong> {(facialAsymmetry?.overallAsymmetry || 0) > 0.2 ? 'Asymmetry detected' : 'Normal'}
+            </div>
+          </div>
+          
+          <div className={`fast-item ${(postureAnalysis?.armDrop || 0) > 0.2 ? 'active' : ''}`}>
+            <div className="fast-letter">A</div>
+            <div className="fast-description">
+              <strong>Arms:</strong> {(postureAnalysis?.armDrop || 0) > 0.2 ? 'Weakness detected' : 'Normal'}
+            </div>
+          </div>
+          
+          <div className={`fast-item ${
+            speechAnalysis?.slurredSpeech || 
+            (speechAnalysis?.clarity && speechAnalysis.clarity < 70) || 
+            (speechAnalysis?.fluency && speechAnalysis.fluency < 70) ? 
+            'active' : ''}`}>
+            <div className="fast-letter">S</div>
+            <div className="fast-description">
+              <strong>Speech:</strong> {
+                speechAnalysis?.slurredSpeech || 
+                (speechAnalysis?.clarity && speechAnalysis.clarity < 70) || 
+                (speechAnalysis?.fluency && speechAnalysis.fluency < 70) ? 
+                'Impaired' : 'Normal'
+              }
+            </div>
+          </div>
+          
+          <div className="fast-item time">
+            <div className="fast-letter">T</div>
+            <div className="fast-description">
+              <strong>Time:</strong> {riskLevel === 'high' ? 'Call 911 immediately' : 'Track symptoms'}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Disclaimer */}
+      <div className="disclaimer">
+        This is not a medical diagnosis. If you suspect a stroke, call emergency services immediately.
+      </div>
+    </div>
+  );
 };
 
 export default StrokeAssessment;

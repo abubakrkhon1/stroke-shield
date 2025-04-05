@@ -5,6 +5,7 @@ import ResultsPanel from './components/ResultsPanel';
 import FaceMeshDetection from './components/FaceMeshDetection';
 import PoseDetection from './components/PoseDetection';
 import StrokeAssessment from './components/StrokeAssessment';
+import SpeechAnalysis from './components/SpeechAnalysis';
 
 function App() {
   const [faceMeshResults, setFaceMeshResults] = useState(null);
@@ -14,6 +15,7 @@ function App() {
   const [postureMetrics, setPostureMetrics] = useState({});
   const [riskLevel, setRiskLevel] = useState('low');
   const [assessmentFindings, setAssessmentFindings] = useState([]);
+  const [speechAnalysisResults, setSpeechAnalysisResults] = useState(null);
   
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
@@ -29,6 +31,7 @@ function App() {
     setPostureMetrics({});
     setRiskLevel('low');
     setAssessmentFindings([]);
+    setSpeechAnalysisResults(null);
   };
   
   useEffect(() => {
@@ -88,6 +91,23 @@ function App() {
           </div>
         </div>
         
+        {/* Speech Analysis Section */}
+        <div className="mt-6 bg-white rounded-lg shadow-lg p-4">
+          <SpeechAnalysis 
+            onSpeechAnalyzed={setSpeechAnalysisResults}
+            facialMetrics={asymmetryMetrics}
+          />
+        </div>
+        
+        {/* Overall Stroke Assessment */}
+        <div className="mt-6 bg-white rounded-lg shadow-lg p-4">
+          <StrokeAssessment 
+            facialAsymmetry={asymmetryMetrics}
+            postureAnalysis={postureMetrics}
+            speechAnalysis={speechAnalysisResults}
+          />
+        </div>
+        
         {/* Hidden components for detection logic */}
         <FaceMeshDetection 
           webcamRef={webcamRef}
@@ -100,12 +120,6 @@ function App() {
           isDetecting={isDetecting}
           onResults={setPoseResults}
           onMetricsUpdate={setPostureMetrics}
-        />
-        <StrokeAssessment 
-          asymmetryMetrics={asymmetryMetrics}
-          postureMetrics={postureMetrics}
-          onRiskUpdate={setRiskLevel}
-          onFindingsUpdate={setAssessmentFindings}
         />
       </main>
       

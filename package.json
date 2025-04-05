@@ -10,11 +10,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/control_utils": "^0.6.1675466023",
     "@mediapipe/drawing_utils": "^0.3.1675466124",
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@mediapipe/pose": "^0.5.1675469404",
+    "axios": "^1.8.4",
     "chart.js": "^4.4.8",
     "cors": "^2.8.5",
     "express": "^5.1.0",
