@@ -46,12 +46,14 @@ function App() {
       <header className="bg-blue-600 text-white p-4">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold">Stroke Detection System</h1>
-          <p className="mt-2">Real-time analysis of facial asymmetry and body posture</p>
+          <p className="mt-2">Real-time analysis for the FAST protocol (Face, Arms, Speech, Time)</p>
         </div>
       </header>
       
       <main className="container mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top row: Camera input and Face/Arm detection results */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Left column: Camera feed and controls */}
           <div className="bg-white rounded-lg shadow-lg p-4">
             <h2 className="text-xl font-bold mb-4">Camera Input</h2>
             <div className="detection-container">
@@ -81,6 +83,7 @@ function App() {
             </div>
           </div>
           
+          {/* Right column: Face/Arm detection metrics */}
           <div>
             <ResultsPanel 
               asymmetryMetrics={asymmetryMetrics}
@@ -91,16 +94,16 @@ function App() {
           </div>
         </div>
         
-        {/* Speech Analysis Section */}
-        <div className="mt-6 bg-white rounded-lg shadow-lg p-4">
+        {/* Middle row: Speech Analysis */}
+        <div className="mb-6">
           <SpeechAnalysis 
             onSpeechAnalyzed={setSpeechAnalysisResults}
             facialMetrics={asymmetryMetrics}
           />
         </div>
         
-        {/* Overall Stroke Assessment */}
-        <div className="mt-6 bg-white rounded-lg shadow-lg p-4">
+        {/* Bottom row: Overall Stroke Assessment */}
+        <div className="mb-6">
           <StrokeAssessment 
             facialAsymmetry={asymmetryMetrics}
             postureAnalysis={postureMetrics}
@@ -109,23 +112,25 @@ function App() {
         </div>
         
         {/* Hidden components for detection logic */}
-        <FaceMeshDetection 
-          webcamRef={webcamRef}
-          isDetecting={isDetecting}
-          onResults={setFaceMeshResults}
-          onMetricsUpdate={setAsymmetryMetrics}
-        />
-        <PoseDetection 
-          webcamRef={webcamRef}
-          isDetecting={isDetecting}
-          onResults={setPoseResults}
-          onMetricsUpdate={setPostureMetrics}
-        />
+        <div style={{ display: 'none' }}>
+          <FaceMeshDetection 
+            webcamRef={webcamRef}
+            isDetecting={isDetecting}
+            onResults={setFaceMeshResults}
+            onMetricsUpdate={setAsymmetryMetrics}
+          />
+          <PoseDetection 
+            webcamRef={webcamRef}
+            isDetecting={isDetecting}
+            onResults={setPoseResults}
+            onMetricsUpdate={setPostureMetrics}
+          />
+        </div>
       </main>
       
       <footer className="bg-gray-800 text-white p-4 mt-8">
         <div className="container mx-auto text-center">
-          <p>Stroke Detection Application - Using MediaPipe and React</p>
+          <p>Stroke Detection Application - Using MediaPipe and AI</p>
           <p className="text-sm mt-2">Disclaimer: This tool is for educational purposes only and not a medical diagnostic device.</p>
         </div>
       </footer>

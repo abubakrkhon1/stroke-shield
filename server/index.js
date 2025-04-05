@@ -75,7 +75,17 @@ app.post('/api/analyze-speech', async (req, res) => {
       return res.status(400).json({ error: 'Missing speech transcription' });
     }
     
+    console.log('Received speech analysis request:', {
+      transcriptionLength: transcription.length,
+      facialMetricsProvided: !!facialMetrics
+    });
+    
+    // Log API key status (without exposing the actual key)
+    console.log('Gemini API key status:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
+    
     const analysis = await analyzeSpeech(transcription, facialMetrics);
+    
+    console.log('Speech analysis completed successfully');
     
     // Save the analysis in the database
     const id = Date.now().toString();
@@ -95,7 +105,13 @@ app.post('/api/analyze-speech', async (req, res) => {
     });
   } catch (error) {
     console.error('Error analyzing speech:', error);
-    res.status(500).json({ error: 'Failed to analyze speech' });
+    console.error(error.stack); // Log the full error stack trace
+    
+    res.status(500).json({ 
+      error: 'Failed to analyze speech',
+      message: error.message || 'Unknown error occurred',
+      details: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
   }
 });
 

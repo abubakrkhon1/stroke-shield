@@ -89,20 +89,31 @@ const SpeechAnalysis = ({ onSpeechAnalyzed, facialMetrics }) => {
       setIsAnalyzing(true);
       setError('');
 
+      console.log('Sending speech for analysis:', { 
+        transcription: transcript,
+        facialMetrics: facialMetrics || {}
+      });
+
       const response = await axios.post('/api/analyze-speech', {
         transcription: transcript,
-        facialMetrics
+        facialMetrics: facialMetrics || {}
       });
+
+      console.log('Speech analysis response:', response.data);
 
       if (response.data && response.data.analysis) {
         setSpeechResults(response.data.analysis);
-        onSpeechAnalyzed(response.data.analysis);
+        
+        // Only call the callback if it exists
+        if (typeof onSpeechAnalyzed === 'function') {
+          onSpeechAnalyzed(response.data.analysis);
+        }
       } else {
         setError('Invalid response from speech analysis service.');
       }
     } catch (err) {
       console.error('Error analyzing speech:', err);
-      setError('Failed to analyze speech. Please try again.');
+      setError(`Failed to analyze speech: ${err.message || 'Unknown error'}`);
     } finally {
       setIsAnalyzing(false);
     }
