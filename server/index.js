@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { createMemoryDb } = require('./memoryDb');
-const { analyzeSpeech } = require('./geminiService');
 
 // Initialize the app
 const app = express();
@@ -63,70 +62,6 @@ app.get('/api/assessments/recent', (req, res) => {
   } catch (error) {
     console.error('Error fetching recent assessments:', error);
     res.status(500).json({ error: 'Failed to fetch recent assessments' });
-  }
-});
-
-// Speech analysis endpoint
-app.post('/api/analyze-speech', async (req, res) => {
-  try {
-    const { transcription, facialMetrics } = req.body;
-    
-    if (!transcription) {
-      return res.status(400).json({ error: 'Missing speech transcription' });
-    }
-    
-    console.log('Received speech analysis request:', {
-      transcriptionLength: transcription.length,
-      facialMetricsProvided: !!facialMetrics
-    });
-    
-    // Log API key status (without exposing the actual key)
-    console.log('Gemini API key status:', process.env.GEMINI_API_KEY ? 'Present' : 'Missing');
-    
-    const analysis = await analyzeSpeech(transcription, facialMetrics);
-    
-    console.log('Speech analysis completed successfully');
-    
-    // Save the analysis in the database
-    const id = Date.now().toString();
-    const speechAssessment = {
-      id,
-      transcription,
-      analysis,
-      timestamp: new Date().toISOString()
-    };
-    
-    db.addSpeechAssessment(speechAssessment);
-    
-    res.json({ 
-      id,
-      analysis,
-      message: 'Speech analysis completed successfully'
-    });
-  } catch (error) {
-    console.error('Error analyzing speech:', error);
-    console.error(error.stack); // Log the full error stack trace
-    
-    res.status(500).json({ 
-      error: 'Failed to analyze speech',
-      message: error.message || 'Unknown error occurred',
-      details: process.env.NODE_ENV === 'production' ? undefined : error.stack
-    });
-  }
-});
-
-// Get recent speech assessments
-app.get('/api/speech-assessments/recent', (req, res) => {
-  try {
-    // Sort by timestamp descending and get most recent 10
-    const recentSpeechAssessments = [...(db.speechAssessments || [])]
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 10);
-      
-    res.json(recentSpeechAssessments);
-  } catch (error) {
-    console.error('Error fetching recent speech assessments:', error);
-    res.status(500).json({ error: 'Failed to fetch recent speech assessments' });
   }
 });
 
