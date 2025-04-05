@@ -87,6 +87,15 @@
               <label for="pose-toggle">Show Pose Detection</label>
             </div>
           </div>
+          <div class="mt-2">
+            <select id="simulation-mode" class="px-2 py-1 border rounded">
+              <option value="normal">Normal Simulation</option>
+              <option value="mild">Mild Asymmetry</option>
+              <option value="moderate">Moderate Asymmetry</option>
+              <option value="severe">Severe Asymmetry</option>
+            </select>
+            <span class="text-sm text-gray-500 ml-2">Simulation mode for testing</span>
+          </div>
         </div>
         
         <div class="bg-white rounded-lg shadow-lg p-4">
@@ -178,6 +187,7 @@
         const clearButton = document.getElementById('clear-results');
         const faceMeshToggle = document.getElementById('face-mesh-toggle');
         const poseToggle = document.getElementById('pose-toggle');
+        const simulationMode = document.getElementById('simulation-mode');
         
         let faceMesh;
         let pose;
@@ -186,6 +196,34 @@
         let isDetecting = false;
         let showFaceMesh = true;
         let showPose = false;
+        
+        // Store metrics for smoothing
+        let metricsHistory = {
+          eyeAsymmetry: [],
+          mouthAsymmetry: [],
+          eyebrowAsymmetry: [],
+          shoulderImbalance: [],
+          headTilt: [],
+          bodyLean: []
+        };
+        
+        // Default metrics values
+        let currentMetrics = {
+          eyeAsymmetry: 0,
+          mouthAsymmetry: 0,
+          eyebrowAsymmetry: 0,
+          shoulderImbalance: 0,
+          headTilt: 0,
+          bodyLean: 0,
+          overallAsymmetry: 0
+        };
+        
+        // Max history length for smoothing
+        const MAX_HISTORY = 10;
+        
+        // Update frequency for metrics display (ms)
+        const UPDATE_INTERVAL = 500;
+        let lastUpdate = 0;
         
         // Initialize metrics chart
         const ctx = document.getElementById('metrics-chart').getContext('2d');
@@ -235,9 +273,33 @@
                   text: 'Asymmetry (%)'
                 }
               }
+            },
+            animation: {
+              duration: 500
             }
           }
         });
+        
+        // Helper function to get average of array
+        function getAverage(arr) {
+          if (arr.length === 0) return 0;
+          return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+        
+        // Add value to metrics history and maintain max length
+        function addToHistory(metric, value) {
+          if (!metricsHistory[metric]) {
+            metricsHistory[metric] = [];
+          }
+          
+          metricsHistory[metric].push(value);
+          
+          if (metricsHistory[metric].length > MAX_HISTORY) {
+            metricsHistory[metric].shift();
+          }
+          
+          return getAverage(metricsHistory[metric]);
+        }
         
         // Initialize MediaPipe FaceMesh
         function setupFaceMesh() {
@@ -286,6 +348,7 @@
           
           if (results.multiFaceLandmarks && showFaceMesh) {
             for (const landmarks of results.multiFaceLandmarks) {
+              // Draw face mesh
               drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, 
                             {color: '#C0C0C070', lineWidth: 1});
               drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
@@ -326,6 +389,198 @@
           canvasCtx.restore();
         }
         
+        // Generate simulated metrics based on selected mode
+        function getSimulatedMetrics() {
+          const mode = simulationMode.value;
+          const baseNoise = 0.02; // Small amount of noise for variation
+          
+          let baseValues = {
+            eyeAsymmetry: 0.05,
+            mouthAsymmetry: 0.05,
+            eyebrowAsymmetry: 0.05,
+            shoulderImbalance: 0.05,
+            headTilt: 0.05,
+            bodyLean: 0.05
+          };
+          
+          // Adjust values based on simulation mode
+          switch(mode) {
+            case 'mild':
+              baseValues.eyeAsymmetry = 0.15;
+              baseValues.mouthAsymmetry = 0.12;
+              break;
+            case 'moderate':
+              baseValues.eyeAsymmetry = 0.25;
+              baseValues.mouthAsymmetry = 0.22;
+              baseValues.eyebrowAsymmetry = 0.20;
+              baseValues.shoulderImbalance = 0.15;
+              break;
+            case 'severe':
+              baseValues.eyeAsymmetry = 0.35;
+              baseValues.mouthAsymmetry = 0.30;
+              baseValues.eyebrowAsymmetry = 0.28;
+              baseValues.shoulderImbalance = 0.20;
+              baseValues.headTilt = 0.25;
+              break;
+            default: // normal
+              // Keep default low values
+              break;
+          }
+          
+          // Add small noise to each value for realistic variation
+          return {
+            eyeAsymmetry: baseValues.eyeAsymmetry + (Math.random() * baseNoise * 2 - baseNoise),
+            mouthAsymmetry: baseValues.mouthAsymmetry + (Math.random() * baseNoise * 2 - baseNoise),
+            eyebrowAsymmetry: baseValues.eyebrowAsymmetry + (Math.random() * baseNoise * 2 - baseNoise),
+            shoulderImbalance: baseValues.shoulderImbalance + (Math.random() * baseNoise * 2 - baseNoise),
+            headTilt: baseValues.headTilt + (Math.random() * baseNoise * 2 - baseNoise),
+            bodyLean: baseValues.bodyLean + (Math.random() * baseNoise * 2 - baseNoise)
+          };
+        }
+        
+        // Update metrics with smoothing
+        function updateMetrics() {
+          if (!isDetecting) return;
+          
+          const now = Date.now();
+          if (now - lastUpdate < UPDATE_INTERVAL) {
+            return; // Only update at the specified interval
+          }
+          lastUpdate = now;
+          
+          // Get simulated metrics
+          const metrics = getSimulatedMetrics();
+          
+          // Add to history and get smoothed values
+          const smoothedMetrics = {
+            eyeAsymmetry: addToHistory('eyeAsymmetry', metrics.eyeAsymmetry),
+            mouthAsymmetry: addToHistory('mouthAsymmetry', metrics.mouthAsymmetry),
+            eyebrowAsymmetry: addToHistory('eyebrowAsymmetry', metrics.eyebrowAsymmetry),
+            shoulderImbalance: addToHistory('shoulderImbalance', metrics.shoulderImbalance),
+            headTilt: addToHistory('headTilt', metrics.headTilt),
+            bodyLean: addToHistory('bodyLean', metrics.bodyLean)
+          };
+          
+          // Calculate overall asymmetry
+          const overallAsymmetry = (
+            smoothedMetrics.eyeAsymmetry * 0.4 + 
+            smoothedMetrics.mouthAsymmetry * 0.4 + 
+            smoothedMetrics.eyebrowAsymmetry * 0.2
+          );
+          
+          // Update current metrics
+          currentMetrics = {
+            ...smoothedMetrics,
+            overallAsymmetry
+          };
+          
+          // Update UI
+          document.getElementById('eye-asymmetry').textContent = (currentMetrics.eyeAsymmetry * 100).toFixed(1) + '%';
+          document.getElementById('mouth-asymmetry').textContent = (currentMetrics.mouthAsymmetry * 100).toFixed(1) + '%';
+          document.getElementById('eyebrow-asymmetry').textContent = (currentMetrics.eyebrowAsymmetry * 100).toFixed(1) + '%';
+          document.getElementById('overall-asymmetry').textContent = (currentMetrics.overallAsymmetry * 100).toFixed(1) + '%';
+          
+          document.getElementById('shoulder-imbalance').textContent = (currentMetrics.shoulderImbalance * 100).toFixed(1) + '%';
+          document.getElementById('head-tilt').textContent = (currentMetrics.headTilt * 100).toFixed(1) + '%';
+          document.getElementById('body-lean').textContent = (currentMetrics.bodyLean * 100).toFixed(1) + '%';
+          
+          // Update chart
+          metricsChart.data.datasets[0].data = [
+            currentMetrics.eyeAsymmetry * 100, 
+            currentMetrics.mouthAsymmetry * 100, 
+            currentMetrics.eyebrowAsymmetry * 100, 
+            currentMetrics.overallAsymmetry * 100,
+            currentMetrics.shoulderImbalance * 100,
+            currentMetrics.headTilt * 100,
+            currentMetrics.bodyLean * 100
+          ];
+          metricsChart.update();
+          
+          // Update risk assessment
+          updateRiskAssessment();
+        }
+        
+        // Update risk assessment based on current metrics
+        function updateRiskAssessment() {
+          // Determine risk level based on metrics
+          let riskLevel = 'low';
+          let riskColor = 'bg-green-500';
+          let findings = [];
+          
+          const LOW_THRESHOLD = 0.1;
+          const MEDIUM_THRESHOLD = 0.2;
+          const HIGH_THRESHOLD = 0.3;
+          
+          if (currentMetrics.eyeAsymmetry > HIGH_THRESHOLD || 
+              currentMetrics.mouthAsymmetry > HIGH_THRESHOLD || 
+              currentMetrics.overallAsymmetry > HIGH_THRESHOLD) {
+            riskLevel = 'high';
+            riskColor = 'bg-red-500';
+            findings.push('Significant facial asymmetry detected');
+            
+            if (currentMetrics.eyeAsymmetry > HIGH_THRESHOLD) {
+              findings.push('High eye asymmetry - possible facial drooping');
+            }
+            if (currentMetrics.mouthAsymmetry > HIGH_THRESHOLD) {
+              findings.push('High mouth asymmetry - possible facial weakness');
+            }
+            
+            findings.push('Multiple high-risk indicators detected. Consider seeking immediate medical evaluation.');
+          } else if (currentMetrics.eyeAsymmetry > MEDIUM_THRESHOLD || 
+                    currentMetrics.mouthAsymmetry > MEDIUM_THRESHOLD || 
+                    currentMetrics.shoulderImbalance > MEDIUM_THRESHOLD || 
+                    currentMetrics.overallAsymmetry > MEDIUM_THRESHOLD) {
+            riskLevel = 'medium';
+            riskColor = 'bg-yellow-500';
+            findings.push('Moderate asymmetry detected');
+            
+            if (currentMetrics.eyeAsymmetry > MEDIUM_THRESHOLD) {
+              findings.push('Moderate eye asymmetry detected');
+            }
+            if (currentMetrics.mouthAsymmetry > MEDIUM_THRESHOLD) {
+              findings.push('Moderate mouth asymmetry detected');
+            }
+            if (currentMetrics.shoulderImbalance > MEDIUM_THRESHOLD) {
+              findings.push('Noticeable shoulder imbalance detected');
+            }
+            
+            findings.push('Some concerning asymmetry detected. Consider consulting a healthcare provider.');
+          } else {
+            findings.push('No significant asymmetry indicators detected at this time.');
+            
+            if (currentMetrics.eyeAsymmetry > LOW_THRESHOLD) {
+              findings.push('Slight eye asymmetry detected (within normal range)');
+            }
+            if (currentMetrics.mouthAsymmetry > LOW_THRESHOLD) {
+              findings.push('Slight mouth asymmetry detected (within normal range)');
+            }
+          }
+          
+          findings.push('Remember FAST for stroke: Face drooping, Arm weakness, Speech difficulty, Time to call emergency services.');
+          
+          // Update risk indicator
+          const riskIndicator = document.getElementById('risk-indicator');
+          riskIndicator.className = `px-4 py-2 rounded text-white font-bold text-center ${riskColor}`;
+          
+          if (riskLevel === 'high') {
+            riskIndicator.textContent = 'High Risk - Seek Medical Attention';
+          } else if (riskLevel === 'medium') {
+            riskIndicator.textContent = 'Medium Risk - Consider Medical Consultation';
+          } else {
+            riskIndicator.textContent = 'Low Risk - Continue Monitoring';
+          }
+          
+          // Update findings list
+          const findingsList = document.getElementById('findings-list');
+          findingsList.innerHTML = '';
+          findings.forEach(finding => {
+            const li = document.createElement('li');
+            li.textContent = finding;
+            li.className = 'mb-1';
+            findingsList.appendChild(li);
+          });
+        }
+        
         // Toggle detection button
         toggleButton.addEventListener('click', function() {
           isDetecting = !isDetecting;
@@ -344,6 +599,7 @@
         
         // Clear results button
         clearButton.addEventListener('click', function() {
+          // Reset metrics displays
           document.getElementById('eye-asymmetry').textContent = 'N/A';
           document.getElementById('mouth-asymmetry').textContent = 'N/A';
           document.getElementById('eyebrow-asymmetry').textContent = 'N/A';
@@ -352,14 +608,37 @@
           document.getElementById('head-tilt').textContent = 'N/A';
           document.getElementById('body-lean').textContent = 'N/A';
           
+          // Reset risk indicator
           document.getElementById('risk-indicator').className = 'px-4 py-2 rounded text-white font-bold text-center bg-gray-500';
           document.getElementById('risk-indicator').textContent = 'Awaiting Analysis';
           
+          // Reset findings
           document.getElementById('findings-list').innerHTML = '<li>No findings yet. Start detection to analyze facial asymmetry and posture.</li>';
           
           // Reset chart
           metricsChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
           metricsChart.update();
+          
+          // Reset metrics history
+          metricsHistory = {
+            eyeAsymmetry: [],
+            mouthAsymmetry: [],
+            eyebrowAsymmetry: [],
+            shoulderImbalance: [],
+            headTilt: [],
+            bodyLean: []
+          };
+          
+          // Reset current metrics
+          currentMetrics = {
+            eyeAsymmetry: 0,
+            mouthAsymmetry: 0,
+            eyebrowAsymmetry: 0,
+            shoulderImbalance: 0,
+            headTilt: 0,
+            bodyLean: 0,
+            overallAsymmetry: 0
+          };
           
           // Clear canvas
           canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
@@ -369,8 +648,10 @@
         faceMeshToggle.addEventListener('change', function() {
           showFaceMesh = this.checked;
           if (!showFaceMesh) {
-            // Clear the canvas
-            canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            // Clear the canvas if needed
+            if (!showPose) {
+              canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            }
           }
         });
         
@@ -378,9 +659,24 @@
         poseToggle.addEventListener('change', function() {
           showPose = this.checked;
           if (!showPose) {
-            // Clear the canvas
-            canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            // Clear the canvas if needed
+            if (!showFaceMesh) {
+              canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            }
           }
+        });
+        
+        // Simulation mode change
+        simulationMode.addEventListener('change', function() {
+          // Reset metrics history when changing simulation mode
+          metricsHistory = {
+            eyeAsymmetry: [],
+            mouthAsymmetry: [],
+            eyebrowAsymmetry: [],
+            shoulderImbalance: [],
+            headTilt: [],
+            bodyLean: []
+          };
         });
         
         function startCamera() {
@@ -405,7 +701,7 @@
                       await pose.send({image: webcamEl});
                     }
                     
-                    // Simulate metrics
+                    // Update metrics
                     updateMetrics();
                   },
                   width: 640,
@@ -443,108 +739,15 @@
           canvasCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
         }
         
-        function updateMetrics() {
-          if (!isDetecting) return;
-          
-          // Simulate asymmetry metrics
-          const eyeAsymmetry = Math.random() * 0.4;
-          const mouthAsymmetry = Math.random() * 0.3;
-          const eyebrowAsymmetry = Math.random() * 0.35;
-          const overallAsymmetry = (eyeAsymmetry * 0.4) + (mouthAsymmetry * 0.4) + (eyebrowAsymmetry * 0.2);
-          
-          // Simulate posture metrics
-          const shoulderImbalance = Math.random() * 0.25;
-          const headTilt = Math.random() * 0.3;
-          const bodyLean = Math.random() * 0.2;
-          
-          // Update UI
-          document.getElementById('eye-asymmetry').textContent = (eyeAsymmetry * 100).toFixed(2) + '%';
-          document.getElementById('mouth-asymmetry').textContent = (mouthAsymmetry * 100).toFixed(2) + '%';
-          document.getElementById('eyebrow-asymmetry').textContent = (eyebrowAsymmetry * 100).toFixed(2) + '%';
-          document.getElementById('overall-asymmetry').textContent = (overallAsymmetry * 100).toFixed(2) + '%';
-          
-          document.getElementById('shoulder-imbalance').textContent = (shoulderImbalance * 100).toFixed(2) + '%';
-          document.getElementById('head-tilt').textContent = (headTilt * 100).toFixed(2) + '%';
-          document.getElementById('body-lean').textContent = (bodyLean * 100).toFixed(2) + '%';
-          
-          // Update chart
-          metricsChart.data.datasets[0].data = [
-            eyeAsymmetry * 100, 
-            mouthAsymmetry * 100, 
-            eyebrowAsymmetry * 100, 
-            overallAsymmetry * 100,
-            shoulderImbalance * 100,
-            headTilt * 100,
-            bodyLean * 100
-          ];
-          metricsChart.update();
-          
-          // Determine risk level based on metrics
-          let riskLevel = 'low';
-          let riskColor = 'bg-green-500';
-          let findings = [];
-          
-          const LOW_THRESHOLD = 0.1;
-          const MEDIUM_THRESHOLD = 0.2;
-          const HIGH_THRESHOLD = 0.3;
-          
-          if (eyeAsymmetry > HIGH_THRESHOLD || mouthAsymmetry > HIGH_THRESHOLD || overallAsymmetry > HIGH_THRESHOLD) {
-            riskLevel = 'high';
-            riskColor = 'bg-red-500';
-            findings.push('Significant facial asymmetry detected');
-            
-            if (eyeAsymmetry > HIGH_THRESHOLD) {
-              findings.push('High eye asymmetry - possible facial drooping');
-            }
-            if (mouthAsymmetry > HIGH_THRESHOLD) {
-              findings.push('High mouth asymmetry - possible facial weakness');
-            }
-            
-            findings.push('Multiple high-risk indicators detected. Consider seeking immediate medical evaluation.');
-          } else if (eyeAsymmetry > MEDIUM_THRESHOLD || mouthAsymmetry > MEDIUM_THRESHOLD || 
-                    shoulderImbalance > MEDIUM_THRESHOLD || overallAsymmetry > MEDIUM_THRESHOLD) {
-            riskLevel = 'medium';
-            riskColor = 'bg-yellow-500';
-            findings.push('Moderate asymmetry detected');
-            findings.push('Some concerning asymmetry detected. Consider consulting a healthcare provider.');
-          } else {
-            findings.push('No significant asymmetry indicators detected at this time.');
-          }
-          
-          findings.push('Remember FAST for stroke: Face drooping, Arm weakness, Speech difficulty, Time to call emergency services.');
-          
-          // Update risk indicator
-          const riskIndicator = document.getElementById('risk-indicator');
-          riskIndicator.className = `px-4 py-2 rounded text-white font-bold text-center ${riskColor}`;
-          
-          if (riskLevel === 'high') {
-            riskIndicator.textContent = 'High Risk - Seek Medical Attention';
-          } else if (riskLevel === 'medium') {
-            riskIndicator.textContent = 'Medium Risk - Consider Medical Consultation';
-          } else {
-            riskIndicator.textContent = 'Low Risk - Continue Monitoring';
-          }
-          
-          // Update findings list
-          const findingsList = document.getElementById('findings-list');
-          findingsList.innerHTML = '';
-          findings.forEach(finding => {
-            const li = document.createElement('li');
-            li.textContent = finding;
-            li.className = 'mb-1';
-            findingsList.appendChild(li);
-          });
-        }
-        
         function simulateDetection() {
+          // For environments where camera is not available
           if (!isDetecting) return;
           
-          // Update metrics
           updateMetrics();
           
           // Continue simulation if still detecting
           if (isDetecting) {
-            setTimeout(simulateDetection, 1000);
+            requestAnimationFrame(simulateDetection);
           }
         }
       });
