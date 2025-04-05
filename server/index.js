@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { AssemblyAI } = require('assemblyai');
 const { createMemoryDb } = require('./memoryDb');
 
 // Initialize the app
@@ -11,6 +12,12 @@ const PORT = process.env.PORT || 8000;
 // Initialize Google Generative AI
 const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
 const genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
+
+// Initialize AssemblyAI
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
+const assemblyai = new AssemblyAI({
+  apiKey: ASSEMBLYAI_API_KEY
+});
 
 // Create in-memory database
 const db = createMemoryDb();
@@ -189,6 +196,52 @@ app.post('/api/analyze-speech', async (req, res) => {
   } catch (error) {
     console.error('Error analyzing speech:', error);
     res.status(500).json({ error: 'Failed to analyze speech' });
+  }
+});
+
+// Transcribe audio with AssemblyAI
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    const { audioUrl } = req.body;
+    
+    if (!audioUrl) {
+      return res.status(400).json({ error: 'Missing audio URL' });
+    }
+    
+    // Create transcription request with AssemblyAI
+    const transcript = await assemblyai.transcripts.transcribe({
+      audio: audioUrl,
+      language_code: 'en',
+    });
+    
+    res.json({ 
+      transcript: transcript.text,
+      status: 'completed'
+    });
+    
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    res.status(500).json({ error: 'Failed to transcribe audio', details: error.message });
+  }
+});
+
+// Upload audio to AssemblyAI
+app.post('/api/upload-audio', express.raw({ type: 'audio/*', limit: '50mb' }), async (req, res) => {
+  try {
+    // Upload the audio data to AssemblyAI
+    const uploadResponse = await assemblyai.files.upload(req.body, {
+      // You can provide optional parameters here if needed
+      // data_format: 'wav',
+    });
+    
+    // Return the URL of the uploaded audio file
+    res.json({ 
+      upload_url: uploadResponse.url 
+    });
+    
+  } catch (error) {
+    console.error('Error uploading audio:', error);
+    res.status(500).json({ error: 'Failed to upload audio', details: error.message });
   }
 });
 
