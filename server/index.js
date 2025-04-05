@@ -158,17 +158,37 @@ app.post('/api/analyze-speech', async (req, res) => {
     const response = await result.response;
     const text = response.text();
     
+    // Process the AI response text to get valid JSON
+    let jsonStr = text.trim();
+    
+    // Remove code block formatting if present
+    if (jsonStr.startsWith('```')) {
+      // Handle various code block formats
+      jsonStr = jsonStr.replace(/```json\n|```\n|```/g, '').trim();
+    }
+    
+    // Clean the string to handle potential JSON formatting issues
+    jsonStr = jsonStr.replace(/,\s*}/g, '}');  // Remove trailing commas in objects
+    jsonStr = jsonStr.replace(/,\s*]/g, ']');  // Remove trailing commas in arrays
+    
+    console.log('Processing JSON response:', jsonStr);
+    
+    let analysisData;
+    
     try {
-      // Extract the JSON from the response text (could be wrapped in ```json or code blocks)
-      let jsonStr = text.trim();
+      // Parse JSON
+      analysisData = JSON.parse(jsonStr);
       
-      // Remove code block formatting if present
-      if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/```json\n|```\n|```/g, '');
+      // Validate the format to make sure it has all required fields
+      if (!analysisData.coherenceScore || !analysisData.slurredSpeechScore || 
+          !analysisData.wordFindingScore || !analysisData.overallRisk) {
+        throw new Error('Missing required fields in analysis data');
       }
       
-      // Parse JSON
-      const analysisData = JSON.parse(jsonStr);
+      // Make sure observations is an array
+      if (!Array.isArray(analysisData.observations)) {
+        analysisData.observations = [analysisData.observations].filter(Boolean);
+      }
       
       // Save the analysis to the database
       const id = Date.now().toString();
@@ -183,12 +203,14 @@ app.post('/api/analyze-speech', async (req, res) => {
       // Add to database
       db.addSpeechAnalysis(speechAnalysis);
       
+      // Send the analysis back to the client
       res.json(analysisData);
       
     } catch (jsonError) {
-      console.error('Error parsing AI response:', jsonError);
+      console.error('Error parsing or processing JSON:', jsonError);
       res.status(500).json({ 
-        error: 'Failed to parse speech analysis',
+        error: 'Failed to process speech analysis',
+        message: jsonError.message,
         rawResponse: text
       });
     }
