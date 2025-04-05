@@ -19,6 +19,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="speech-recognition.js" defer></script>
     <style>
       .detection-container {
         position: relative;
@@ -56,7 +57,7 @@
     </header>
     
     <main class="container mx-auto p-4">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-white rounded-lg shadow-lg p-4">
           <h2 class="text-xl font-bold mb-4">Camera Input</h2>
           <div class="detection-container">
@@ -166,6 +167,63 @@
             <strong>Disclaimer:</strong> This tool is not a medical device and should not be used for medical diagnosis. 
             If you suspect a stroke, call emergency services immediately (911 in the US). 
             Remember the FAST method: Facial drooping, Arm weakness, Speech difficulties, Time to call emergency services.
+          </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-4">
+          <h2 class="text-xl font-bold mb-4">Speech Analysis</h2>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Voice Recognition</h3>
+            <div class="mb-4">
+              <button id="start-recording" class="px-4 py-2 rounded font-bold bg-blue-500 text-white">Start Recording</button>
+              <button id="stop-recording" class="px-4 py-2 rounded font-bold bg-red-500 text-white ml-2" disabled>Stop Recording</button>
+            </div>
+            <div class="mb-4">
+              <div class="bg-gray-100 p-3 rounded">
+                <p id="recording-status">Click "Start Recording" to begin speech analysis.</p>
+              </div>
+            </div>
+            <div class="mb-4">
+              <h4 class="font-medium mb-2">Transcript:</h4>
+              <div id="transcript" class="bg-gray-100 p-3 rounded min-h-[100px] max-h-[200px] overflow-y-auto"></div>
+            </div>
+          </div>
+          
+          <!-- Speech Analysis Results -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Speech Analysis Results</h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="metric-card">
+                <div class="metric-label">Speech Coherence</div>
+                <div id="speech-coherence" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Slurred Speech</div>
+                <div id="slurred-speech" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Word Finding</div>
+                <div id="word-finding" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Speech Risk Level</div>
+                <div id="speech-risk" class="metric-value">N/A</div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="font-medium mb-2">Observations:</h4>
+              <ul id="speech-observations" class="list-disc pl-5">
+                <li>No analysis yet. Record speech to analyze patterns.</li>
+              </ul>
+            </div>
+          </div>
+          
+          <!-- Past Speech Analyses -->
+          <div>
+            <h3 class="text-lg font-semibold mb-2">Recent Analyses</h3>
+            <div id="recent-speech-analyses" class="space-y-2">
+              <p>No previous analyses available.</p>
+            </div>
           </div>
         </div>
       </div>
