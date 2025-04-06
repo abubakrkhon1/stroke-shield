@@ -1,4 +1,4 @@
-# StrokeGuard: AI-powered detection when seconds matter
+# StrokeGuard: AI-powered detection when seconds matter By Abubakr and Bekhruz
 
 StrokeGuard is an advanced AI-powered stroke detection platform that combines cutting-edge technologies to provide real-time health monitoring and early warning signs of stroke. By analyzing facial asymmetry, posture anomalies, and speech patterns, the system offers comprehensive stroke risk assessment.
 
