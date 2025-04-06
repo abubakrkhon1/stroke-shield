@@ -42,7 +42,7 @@ function App() {
     <div className="min-h-screen bg-red-100">
       <header className="bg-blue-600 text-white p-4">
         <div className="container mx-auto">
-          <h1 className="text-3xl font-bold">Stroke Detection System</h1>
+          <h1 className="text-3xl font-bold">Stroke Detection System AAAA</h1>
           <p className="mt-2">
             Real-time analysis of facial asymmetry and body posture
           </p>

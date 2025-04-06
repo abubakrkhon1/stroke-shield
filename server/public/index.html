@@ -50,9 +50,19 @@
   </head>
   <body class="bg-gray-100 font-sans">
     <header class="bg-blue-600 text-white p-4">
-      <div class="container mx-auto">
-        <h1 class="text-3xl font-bold">Stroke Detection System</h1>
-        <p class="mt-2">Real-time analysis of facial asymmetry and body posture</p>
+      <div class="container mx-auto flex justify-between items-center">
+        <div class="flex items-center gap-x-2">
+          <div>
+            <img src="logo.png" alt="StrokeShield Logo" class="h-32 w-40">
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">StrokeShield</h1>
+            <p class="mt-2 text-sm">Real-time analysis of facial asymmetry, body posture, and voice recognition</p>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-italic">Keep your head and body straight for best results</h1>
+        </div>
       </div>
     </header>
     
@@ -97,78 +107,79 @@
             <input type="range" id="detection-sensitivity" min="1" max="10" value="5" class="w-32">
             <span id="sensitivity-value" class="ml-2">5</span>
           </div>
+          <div class="p-4">  <!-- Detection Results Container -->
+            <h2 class="text-xl font-bold mb-4">Detection Results</h2>
+
+            <!-- Risk Level Indicator -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold mb-2">Risk Assessment</h3>
+              <div id="risk-indicator" class="px-4 py-2 rounded text-white font-bold text-center bg-gray-500">
+                Awaiting Analysis
+              </div>
+            </div>
+
+            <!-- Visualization -->
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold mb-2">Asymmetry Metrics</h3>
+              <div class="bg-white rounded-lg p-2 shadow-inner">
+                <canvas id="metrics-chart" height="200"></canvas>
+              </div>
+            </div>
+
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="metric-card">
+                <div class="metric-label">Eye Asymmetry</div>
+                <div id="eye-asymmetry" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Mouth Asymmetry</div>
+                <div id="mouth-asymmetry" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Eyebrow Asymmetry</div>
+                <div id="eyebrow-asymmetry" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Overall Asymmetry</div>
+                <div id="overall-asymmetry" class="metric-value">N/A</div>
+              </div>
+            </div>
+
+            <!-- Posture Metrics -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="metric-card">
+                <div class="metric-label">Shoulder Imbalance</div>
+                <div id="shoulder-imbalance" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Head Tilt</div>
+                <div id="head-tilt" class="metric-value">N/A</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Body Lean</div>
+                <div id="body-lean" class="metric-value">N/A</div>
+              </div>
+            </div>
+
+            <!-- Findings -->
+            <div>
+              <h3 class="text-lg font-semibold mb-2">Key Findings</h3>
+              <ul id="findings-list" class="list-disc pl-5">
+                <li>No findings yet. Start detection to analyze facial asymmetry and posture.</li>
+              </ul>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="mt-6 text-sm text-gray-600 bg-gray-100 p-3 rounded">
+              <strong>Disclaimer:</strong> This tool is not a medical device and should not be used for medical diagnosis. 
+              If you suspect a stroke, call emergency services immediately (911 in the US). 
+              Remember the FAST method: Facial drooping, Arm weakness, Speech difficulties, Time to call emergency services.
+            </div>
+          </div>
         </div>
         
-        <div class="bg-white rounded-lg shadow-lg p-4">
-          <h2 class="text-xl font-bold mb-4">Detection Results</h2>
-          
-          <!-- Risk Level Indicator -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold mb-2">Risk Assessment</h3>
-            <div id="risk-indicator" class="px-4 py-2 rounded text-white font-bold text-center bg-gray-500">
-              Awaiting Analysis
-            </div>
-          </div>
-          
-          <!-- Visualization -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold mb-2">Asymmetry Metrics</h3>
-            <div class="bg-white rounded-lg p-2 shadow-inner">
-              <canvas id="metrics-chart" height="200"></canvas>
-            </div>
-          </div>
-          
-          <!-- Metrics Grid -->
-          <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="metric-card">
-              <div class="metric-label">Eye Asymmetry</div>
-              <div id="eye-asymmetry" class="metric-value">N/A</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Mouth Asymmetry</div>
-              <div id="mouth-asymmetry" class="metric-value">N/A</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Eyebrow Asymmetry</div>
-              <div id="eyebrow-asymmetry" class="metric-value">N/A</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Overall Asymmetry</div>
-              <div id="overall-asymmetry" class="metric-value">N/A</div>
-            </div>
-          </div>
-          
-          <!-- Posture Metrics -->
-          <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="metric-card">
-              <div class="metric-label">Shoulder Imbalance</div>
-              <div id="shoulder-imbalance" class="metric-value">N/A</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Head Tilt</div>
-              <div id="head-tilt" class="metric-value">N/A</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Body Lean</div>
-              <div id="body-lean" class="metric-value">N/A</div>
-            </div>
-          </div>
-          
-          <!-- Findings -->
-          <div>
-            <h3 class="text-lg font-semibold mb-2">Key Findings</h3>
-            <ul id="findings-list" class="list-disc pl-5">
-              <li>No findings yet. Start detection to analyze facial asymmetry and posture.</li>
-            </ul>
-          </div>
-          
-          <!-- Disclaimer -->
-          <div class="mt-6 text-sm text-gray-600 bg-gray-100 p-3 rounded">
-            <strong>Disclaimer:</strong> This tool is not a medical device and should not be used for medical diagnosis. 
-            If you suspect a stroke, call emergency services immediately (911 in the US). 
-            Remember the FAST method: Facial drooping, Arm weakness, Speech difficulties, Time to call emergency services.
-          </div>
-        </div>
+        
         <div class="bg-white rounded-lg shadow-lg p-4">
           <h2 class="text-xl font-bold mb-4">Speech Analysis</h2>
           <div class="mb-6">
@@ -235,11 +246,80 @@
           </div>
         </div>
       </div>
+
+        <div class="p-4 bg-white rounded-lg shadow-lg border">
+          <h2 class="text-xl font-bold text-blue-600">🧠 Stroke Detection Guide</h2>
+          <p class="text-gray-700 m-2">Follow these simple steps to get the most accurate results:</p>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-2">
+            <p class="font-medium">😊 <strong>Try Smiling</strong></p>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Look directly into the camera</li>
+              <li>Give a big, natural smile</li>
+              <li>We're checking for symmetry in your expression</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-2">
+            <p class="font-medium">🙋 <strong>Raise Both Arms</strong></p>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Lift both arms up to shoulder level</li>
+              <li>Hold them there for a few seconds</li>
+              <li>We're watching for any imbalance or drift</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-2">
+            <p class="font-medium">🗣️ <strong>Read This Out Loud</strong></p>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Click the <em>Start Recording</em> button</li>
+              <li>Read: <em>"She sells seashells by the seashore"</em></li>
+              <li>Speak clearly and at a normal pace</li>
+            </ul>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-2">
+            <p class="font-medium">🪞 <strong>Bonus Tip</strong></p>
+            <p class="mt-1">Keep your head and body straight. Avoid leaning — it helps improve detection accuracy!</p>
+          </div>
+
+          <div class="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+            <p class="font-medium">✅ <strong>You're All Set!</strong></p>
+            <p class="mt-1">Once you're done, StrokeShield will analyze your results and let you know if anything seems off.</p>
+          </div>
+          <h2 class="text-xl font-semibold text-red-600 mb-2">
+            🚨 What to Do If a Stroke Is Detected
+          </h2>
+
+          <div class="space-y-4 text-xl text-gray-700">
+
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3">
+              <p class="font-semibold text-red-700 mb-1">🔴 Remember FAST:</p>
+              <ul class="list-disc pl-5">
+                <li><strong>F</strong> – Face drooping</li>
+                <li><strong>A</strong> – Arm weakness</li>
+                <li><strong>S</strong> – Speech difficulty</li>
+                <li><strong>T</strong> – Time to call emergency services</li>
+              </ul>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+              <p class="font-semibold text-yellow-800 mb-1">📞 Call Emergency Services</p>
+              <p>If you notice any of these signs, call for help immediately. Time is critical in stroke care.</p>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+              <p class="font-semibold text-blue-800 mb-1">💡 Disclaimer</p>
+              <p>This app provides guidance and monitoring support, but it is <strong>not a substitute for professional medical diagnosis</strong>.</p>
+            </div>
+
+          </div>
+        </div>
     </main>
     
     <footer class="bg-gray-800 text-white p-4 mt-8">
       <div class="container mx-auto text-center">
-        <p>Stroke Detection Application - Using MediaPipe and React</p>
+        <p>StrokeShield</p>
         <p class="text-sm mt-2">Disclaimer: This tool is for educational purposes only and not a medical diagnostic device.</p>
       </div>
     </footer>
